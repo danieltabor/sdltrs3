@@ -27,7 +27,7 @@
    Last modified on Wed May 07 09:12:00 MST 2006 by markgrebe
 */
 
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,7 +66,7 @@
 #ifdef MACOSX
 #define MENU_MOD KMOD_META
 #else
-#define MENU_MOD KMOD_ALT
+#define MENU_MOD SDL_KMOD_ALT
 #endif
 
 typedef struct menu_entry_type {
@@ -295,17 +295,19 @@ int trs_gui_get_key(void)
    do {
      SDL_WaitEvent(&event);
      switch(event.type) {
-       case SDL_QUIT:
+       case SDL_EVENT_QUIT:
          trs_exit();
          break;
+       /*
        case SDL_ACTIVEEVENT:
          break;
-       case SDL_KEYDOWN:
-         if (event.key.keysym.mod & MENU_MOD)
+       */
+       case SDL_EVENT_KEY_DOWN:
+         if (event.key.mod & MENU_MOD)
            {
-           switch (event.key.keysym.sym) {
+           switch (event.key.key) {
 #ifdef MACOSX
-           case SDLK_q:
+           case SDLK_Q:
              trs_exit();
              break;
 #endif             
@@ -348,14 +350,15 @@ int trs_gui_get_key(void)
              break;
            }
          }
-         else if (event.key.keysym.sym == SDLK_F8)
+         else if (event.key.key == SDLK_F8)
             trs_exit();
+        /*
          else if (event.key.keysym.sym < 0x100 && 
                event.key.keysym.unicode >= 0x20 && 
                event.key.keysym.unicode <= 0x7E) 
              return(event.key.keysym.unicode);
-         else 
-           return(event.key.keysym.sym);
+         else*/ 
+           return(event.key.key);
          break;
      }
    } while(!done);   
@@ -575,7 +578,7 @@ int trs_gui_file_browse(char* path, char* filename, int browse_dir, char* type)
   trs_gui_limit_string(current_dir, limited_dir, 62);
   trs_gui_center_text(limited_dir,1,0);
   trs_gui_readdirectory(current_dir, browse_dir);
-
+	fprintf(stderr,"current_dir: %s\nbrowse_dir: %s\n",current_dir,browse_dir);fflush(0);
   if (filenamecount < 12)
     drawcount = filenamecount;
   else
@@ -1824,7 +1827,9 @@ void trs_gui_joystick_management(void)
    {"",0,-1}};
    int selection = 0;
    int done = 0;
-   int i, num_joysticks, joy_index;
+   int i = 0;
+   int num_joysticks = 0;
+   int joy_index = 0;
    char *keypad_choices[2] =     {"      No  ","     Yes  "};
    char *joystick_choices[MAX_JOYSTICKS+1];
    char joystick_strings[MAX_JOYSTICKS+1][64];
@@ -1847,13 +1852,13 @@ void trs_gui_joystick_management(void)
                                                    gui_keypad_joystick);
          break;
        case 1:
-         num_joysticks = SDL_NumJoysticks();
+         SDL_GetJoysticks(&num_joysticks);
          if (num_joysticks > MAX_JOYSTICKS)
            num_joysticks = MAX_JOYSTICKS;
          sprintf(joystick_choices[0],"%60s","None");
          for (i=0;i<num_joysticks;i++) {
            sprintf(joystick_choices[i+1],"Joystick %1d - %47s",i,
-                   SDL_JoystickName(i));
+                   SDL_GetJoystickNameForID(i));
                    }          
          if ((gui_joystick_num == -1) || (gui_joystick_num >= num_joysticks))
            joy_index = 0;

@@ -40,7 +40,11 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 /*#define IDEBUG 1*/
 /*#define IDEBUG2 1*/
@@ -159,8 +163,7 @@ trs_cassette_interrupts_enabled()
   return interrupt_mask & (M3_CASSRISE_BIT|M3_CASSFALL_BIT);
 }
 
-int
-trs_timer_is_turbo()
+int trs_timer_is_turbo()
 {
     return(timer_overclock);
 }
@@ -382,8 +385,8 @@ trs_timer_event(void)
 
 void trs_timer_sync_with_host(void)
 {
-	Uint32 curtime;
-	Uint32 deltatime;
+	Uint64 curtime;
+	Uint64 deltatime;
     static Uint32 lasttime = 0;
 
     if (timer_overclock) {
@@ -395,7 +398,11 @@ void trs_timer_sync_with_host(void)
 	curtime = SDL_GetTicks();
 
 	if (lasttime + deltatime > curtime) {
+#ifdef __EMSCRIPTEN__
+		emscripten_sleep(lasttime + deltatime - curtime);
+#else
 		SDL_Delay(lasttime + deltatime - curtime);
+#endif
     }
 	curtime = SDL_GetTicks();
 

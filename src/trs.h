@@ -128,7 +128,7 @@ extern void trs_kb_bracket(int shifted);
 extern int trs_kb_mem_read(int address);
 extern int trs_next_key(int wait);
 extern void trs_kb_heartbeat(void);
-extern void trs_xlate_keysym(int keysym);
+extern void trs_xlate_keysym(int keysym, int key_down);
 extern void queue_key(int key);
 extern int dequeue_key(void);
 extern void clear_key_queue(void);

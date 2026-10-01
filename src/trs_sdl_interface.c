@@ -73,7 +73,10 @@
 #include "trs_cassette.h"
 #include "trs_sdl_keyboard.h"
 
-#include "SDL/SDL.h"
+#include <SDL3/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "blit.h"
 
 extern char trs_char_data[][MAXCHARS][TRS_CHAR_HEIGHT];
@@ -88,7 +91,7 @@ extern char trs_char_data[][MAXCHARS][TRS_CHAR_HEIGHT];
 #define MENU_MOD KMOD_LMETA
 void restoreAppWindowPrefs();
 #else
-#define MENU_MOD KMOD_LALT
+#define MENU_MOD SDL_KMOD_LALT
 #endif
 
 
@@ -152,6 +155,10 @@ static SDL_Surface *trs_char[6][MAXCHARS];
 static SDL_Surface *trs_box[3][64];
 static SDL_Surface *image;
 static SDL_Surface *screen;
+static SDL_Window *window;
+static SDL_Renderer *renderer;
+static SDL_Texture *texture;
+static SDL_Palette *palette;
 static SDL_Rect drawnRects[MAX_RECTS];
 static Uint32 light_red;
 static Uint32 bright_red;
@@ -363,7 +370,10 @@ trs_opt options[] = {
 };
 
 static int num_options = sizeof(options)/sizeof(trs_opt);
-  
+
+extern int trs_timer_is_turbo();
+extern int trs_timer_switch_turbo();
+
 /* Private routines */
 void bitmap_init();
 void trs_event_init();
@@ -988,60 +998,58 @@ void trs_disk_setsteps(void)
   }
 }
 
-void trs_flip_fullscreen(void)
-{
-  static int window_scale_x = 1;
-  static int window_scale_y = 2;
-  
-  copyStatus = COPY_IDLE;
-  fullscreen = !fullscreen;
-  if (fullscreen) {
+void trs_flip_fullscreen(void) {
+	static int window_scale_x = 1;
+	static int window_scale_y = 2;
+
+	copyStatus = COPY_IDLE;
+	fullscreen = !fullscreen;
+	if (fullscreen) {
 #ifdef MACOSX
-    TrsOriginSave();
+		TrsOriginSave();
 #endif
-    window_scale_x = scale_x;
-    window_scale_y = scale_y;
-    if (scale_x != 1) {
-      scale_x = 1;
-      scale_y = 2;
-      trs_screen_init();
-      grafyx_redraw();
-      trs_screen_refresh();
-    }
-    else {
-      screen = SDL_SetVideoMode(OrigWidth, OrigHeight, 0, 
-                                SDL_ANYFORMAT | SDL_FULLSCREEN);
-      SDL_ShowCursor(SDL_DISABLE);
-      }
-    }
-  else {
-#ifdef MACOSX	  
-	TrsWindowCreate(OrigWidth, OrigHeight);
-    TrsOriginRestore();
-	if (1) {
-#else	  
-    if (window_scale_x != 1) {
-#endif		
-      scale_x = window_scale_x;
-      scale_y = window_scale_y;
-      trs_screen_init();
-      grafyx_redraw();
-      trs_screen_refresh();
-    }
-    else {
-      screen = SDL_SetVideoMode(OrigWidth, OrigHeight, 0, 
-                                SDL_ANYFORMAT);
-      SDL_ShowCursor(SDL_ENABLE);
-	 }
-#ifdef MACOSX	  
-	 TrsOriginRestore();
+		window_scale_x = scale_x;
+		window_scale_y = scale_y;
+		if (scale_x != 1) {
+			scale_x = 1;
+			scale_y = 2;
+			trs_screen_init();
+			grafyx_redraw();
+			trs_screen_refresh();
+		}
+		else {
+			SDL_SetWindowFullscreen(window,fullscreen);
+			SDL_HideCursor();
+		}
+	}
+	else {
+#ifdef MACOSX
+		TrsWindowCreate(OrigWidth, OrigHeight);
+		TrsOriginRestore();
+		if (1) {
+#else
+		if (window_scale_x != 1) {
 #endif
-  }
-  if (trs_show_led) {
-    trs_disk_led(-1,0);
-    trs_hard_led(-1,0);
-  }
+			scale_x = window_scale_x;
+			scale_y = window_scale_y;
+			trs_screen_init();
+			grafyx_redraw();
+			trs_screen_refresh();
+		}
+		else {
+			SDL_SetWindowFullscreen(window,fullscreen);
+			SDL_ShowCursor();
+		}
+#ifdef MACOSX
+		TrsOriginRestore();
+#endif
+	}
+	if (trs_show_led) {
+		trs_disk_led(-1,0);
+		trs_hard_led(-1,0);
+	}
 }
+
 
 void trs_rom_init(void)
 {
@@ -1093,118 +1101,133 @@ void trs_screen_caption(int turbo)
     else {
       sprintf(title,"TRS80 Model %d %s",trs_model, turbo ? "Turbo" : "");
     }
-    SDL_WM_SetCaption(title,NULL);
+    SDL_SetWindowTitle(window,title);
 }
 
 void trs_screen_init()
 {
-  SDL_Color colors[2];
+	SDL_Color colors[2];
 
-  copyStatus = COPY_IDLE;
-  if (trs_model == 1)
-    trs_charset = trs_charset1;
-  else if (trs_model == 3)
-    trs_charset = trs_charset3;
-  else
-    trs_charset = trs_charset4;
+	copyStatus = COPY_IDLE;
+	if (trs_model == 1)
+		trs_charset = trs_charset1;
+	else if (trs_model == 3)
+		trs_charset = trs_charset3;
+	else
+		trs_charset = trs_charset4;
 
-  if (trs_model == 4)
-	resize = resize4;
-  else
-	resize = resize3;
+	if (trs_model == 4)
+		resize = resize4;
+	else
+		resize = resize3;
 
 
-  if (trs_model == 1) {
-    if (trs_charset < 3)
-      cur_char_width = 6 * scale_x;
-    else
-      cur_char_width = 8 * scale_x;
-    cur_char_height = TRS_CHAR_HEIGHT * scale_y;
-  } else {
-    cur_char_width = TRS_CHAR_WIDTH * scale_x;
-    cur_char_height = TRS_CHAR_HEIGHT4 * scale_y;
-  }
-
-  imageSize.width = 8*G_XSIZE*scale_x;
-  imageSize.height = 2*G_YSIZE * scale_y/2;
-  imageSize.bytes_per_line = G_XSIZE * scale_x;
-
-  if (fullscreen)
-    border_width = 0;
-  else
-    border_width = window_border_width;
-
-  if (trs_show_led)
-    led_width = 8;
-  else
-    led_width = 0;
-
-  clear_key_queue();		/* init the key queue */
-
-  if (trs_model >= 3  && !resize) {
-    OrigWidth = cur_char_width * 80 + 2 * border_width;
-    left_margin = cur_char_width * (80 - row_chars)/2 + border_width;
-    OrigHeight = TRS_CHAR_HEIGHT4 * scale_y * 24 + 2 * border_width + led_width;
-    top_margin = (TRS_CHAR_HEIGHT4 * scale_y * 24 -
-                 cur_char_height * col_chars)/2 + border_width;
-  } else {
-    OrigWidth = cur_char_width * row_chars + 2 * border_width;
-    left_margin = border_width;
-    OrigHeight = cur_char_height * col_chars + 2 * border_width + led_width;
-    top_margin = border_width;
-  }
-
-  if (fullscreen) {
-     screen = SDL_SetVideoMode(OrigWidth, OrigHeight, 0, 
-                               SDL_ANYFORMAT | SDL_FULLSCREEN);
-     SDL_ShowCursor(SDL_DISABLE);
+	if (trs_model == 1) {
+		if (trs_charset < 3)
+			cur_char_width = 6 * scale_x;
+		else
+			cur_char_width = 8 * scale_x;
+		cur_char_height = TRS_CHAR_HEIGHT * scale_y;
+	} else {
+		cur_char_width = TRS_CHAR_WIDTH * scale_x;
+		cur_char_height = TRS_CHAR_HEIGHT4 * scale_y;
 	}
-  else {
-#ifdef MACOSX	  
-     TrsWindowResize(OrigWidth, OrigHeight);
-     TrsWindowDisplay();
-#endif	  
-     screen = SDL_SetVideoMode(OrigWidth, OrigHeight, 0, 
-                               SDL_ANYFORMAT);
-     SDL_ShowCursor(SDL_ENABLE);
-    }
-  
-  trs_screen_caption(trs_timer_is_turbo());
 
-  light_red = SDL_MapRGB(screen->format, 0x40,0x00,0x00);
-  bright_red = SDL_MapRGB(screen->format, 0xff,0x00,0x00);
+	imageSize.width = 8*G_XSIZE*scale_x;
+	imageSize.height = 2*G_YSIZE * scale_y/2;
+	imageSize.bytes_per_line = G_XSIZE * scale_x;
+
+	if (fullscreen)
+		border_width = 0;
+	else
+		border_width = window_border_width;
+
+	if (trs_show_led)
+		led_width = 8;
+	else
+		led_width = 0;
+
+	clear_key_queue();		/* init the key queue */
+
+	if (trs_model >= 3  && !resize) {
+		OrigWidth = cur_char_width * 80 + 2 * border_width;
+		left_margin = cur_char_width * (80 - row_chars)/2 + border_width;
+		OrigHeight = TRS_CHAR_HEIGHT4 * scale_y * 24 + 2 * border_width + led_width;
+		top_margin = (TRS_CHAR_HEIGHT4 * scale_y * 24 -
+		              cur_char_height * col_chars)/2 + border_width;
+	} else {
+		OrigWidth = cur_char_width * row_chars + 2 * border_width;
+		left_margin = border_width;
+		OrigHeight = cur_char_height * col_chars + 2 * border_width + led_width;
+		top_margin = border_width;
+	}
+
+	if (fullscreen) {
+		window = SDL_CreateWindow("sdltrs3", OrigWidth, OrigHeight, SDL_WINDOW_FULLSCREEN);
+		SDL_HideCursor();
+	}
+	else {
+#ifdef MACOSX
+		TrsWindowResize(OrigWidth, OrigHeight);
+		TrsWindowDisplay();
+#endif
+		window = SDL_CreateWindow("sdltrs3", OrigWidth, OrigHeight, 0);
+		SDL_ShowCursor();
+	}
+	if( !window ) {
+		error("Couldn't create window");
+		return;
+	}
+	renderer = SDL_CreateRenderer(window,NULL);
+	if( !renderer ) {
+		error("Couldn't create renderer");
+		return;
+	}
+	texture = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_XRGB8888,
+	                            SDL_TEXTUREACCESS_STREAMING,OrigWidth,OrigHeight);
+	screen = SDL_CreateSurface(OrigWidth,OrigHeight,SDL_PIXELFORMAT_XRGB8888);
+	if( !screen ) {
+		error("Couldn't create screen surface");
+		return;
+	}
+	trs_screen_caption(trs_timer_is_turbo());
+
+	light_red = SDL_MapRGB(SDL_GetPixelFormatDetails(screen->format), NULL, 0x40,0x00,0x00);
+	bright_red = SDL_MapRGB(SDL_GetPixelFormatDetails(screen->format), NULL, 0xff,0x00,0x00);
 
 #ifdef MACOSX
-  if (!fullscreen) {
-    centerAppWindow();
-    SetControlManagerModel(trs_model, grafyx_get_microlabs());
-    SetControlManagerTurboMode(trs_timer_is_turbo());
-    UpdateMediaManagerInfo();
-    if (mediaStatusWindowOpen)
-        MediaManagerStatusWindowShow();
-    }
+	if (!fullscreen) {
+		centerAppWindow();
+		SetControlManagerModel(trs_model, grafyx_get_microlabs());
+		SetControlManagerTurboMode(trs_timer_is_turbo());
+		UpdateMediaManagerInfo();
+		if (mediaStatusWindowOpen)
+			MediaManagerStatusWindowShow();
+	}
 	TrsMakeKeyWindow();
 #endif  
 
-  if (image)
-    SDL_FreeSurface(image);
-  memset(grafyx,0,(2*G_YSIZE*MAX_SCALE) * (G_XSIZE*MAX_SCALE));
-  image = SDL_CreateRGBSurfaceFrom(grafyx, imageSize.width, imageSize.height, 1, 
-                                   imageSize.bytes_per_line, 1, 1, 1, 0);
-  colors[0].r = (background >> 16) & 0xFF;
-  colors[0].g = (background >> 8) & 0xFF;
-  colors[0].b = (background) & 0xFF;
-  colors[1].r = (foreground >> 16) & 0xFF;
-  colors[1].g = (foreground >> 8) & 0xFF;
-  colors[1].b = (foreground) & 0xFF;
-  SDL_SetPalette(image,SDL_LOGPAL, colors,0,2);
-  
-  TrsBlitMap(image->format->palette, screen->format);
+	if(image)
+		SDL_DestroySurface(image);
+	memset(grafyx,0,(2*G_YSIZE*MAX_SCALE) * (G_XSIZE*MAX_SCALE));
+	image = SDL_CreateSurfaceFrom(imageSize.width, imageSize.height,
+	                              SDL_PIXELFORMAT_INDEX1LSB, grafyx,
+	                              imageSize.bytes_per_line);
+	colors[0].r = (background >> 16) & 0xFF;
+	colors[0].g = (background >> 8) & 0xFF;
+	colors[0].b = (background) & 0xFF;
+	colors[1].r = (foreground >> 16) & 0xFF;
+	colors[1].g = (foreground >> 8) & 0xFF;
+	colors[1].b = (foreground) & 0xFF;
+	palette = SDL_CreatePalette(2);
+	SDL_SetPaletteColors(palette,colors,0,2);
+	SDL_SetSurfacePalette(image,palette);
+	SDL_SetSurfacePalette(screen,palette);
 
-  bitmap_init(foreground, background);
+	bitmap_init(foreground, background);
 
-  trs_disk_led(-1,0);
-  trs_hard_led(-1,0);
+	trs_disk_led(-1,0);
+	trs_hard_led(-1,0);
 }
 
 Uint32 last_key[256];
@@ -1237,7 +1260,7 @@ void DrawSelectionRectangle(int orig_x, int orig_y, int copy_x, int copy_y)
 	
 	scale = scale_x	;
 	
-	if (screen->format->BitsPerPixel == 8) {
+	if (SDL_BITSPERPIXEL(screen->format) == 8) {
 		register int pitch;
 		register Uint8 *start8;
 		
@@ -1275,7 +1298,7 @@ void DrawSelectionRectangle(int orig_x, int orig_y, int copy_x, int copy_y)
 		}
 		SDL_UnlockSurface(screen);		
 	}
-	else if (screen->format->BitsPerPixel == 16) {
+	else if (SDL_BITSPERPIXEL(screen->format) == 16) {
 		register int pitch2;
 		register Uint16 *start16;
 		
@@ -1313,7 +1336,7 @@ void DrawSelectionRectangle(int orig_x, int orig_y, int copy_x, int copy_y)
 		}
 		SDL_UnlockSurface(screen);		
 	}
-	else if (screen->format->BitsPerPixel == 32) {
+	else if (SDL_BITSPERPIXEL(screen->format) == 32) {
 		register int pitch4;
 		register Uint32 *start32;
 		
@@ -1384,13 +1407,16 @@ void ProcessCopySelection(int selectAll)
 #ifdef MACOSX		
 		if (TrsIsKeyWindow()) {
 #endif			
-			mouse = SDL_GetMouseState(&copy_x, &copy_y);
+			float fcopy_x, fcopy_y;
+			mouse = SDL_GetMouseState(&fcopy_x, &fcopy_y);
+			copy_x = fcopy_x;
+			copy_y = fcopy_y;
 #ifdef MACOSX			
 			if ((copyStatus == COPY_IDLE) && !TrsWindowMouseInside())
 				return;
 #endif			
 			if ((copyStatus == COPY_IDLE) &&
-				(mouse & SDL_BUTTON(1) == 0)) {
+				(mouse & SDL_BUTTON_MASK(1) == 0)) {
 				return;		
 			}
 #ifdef MACOSX			
@@ -1416,7 +1442,7 @@ void ProcessCopySelection(int selectAll)
 				DrawSelectionRectangle(orig_x, orig_y, copy_x, copy_y);
 				drawnRectCount = MAX_RECTS;
 			}
-			else if (mouse & SDL_BUTTON(1) ) {
+			else if (mouse & SDL_BUTTON_MASK(1) ) {
 				copyStatus = COPY_STARTED;
 				orig_x = copy_x;
 				orig_y = copy_y;
@@ -1428,12 +1454,12 @@ void ProcessCopySelection(int selectAll)
 			break;
 		case COPY_STARTED:
 			DrawSelectionRectangle(orig_x, orig_y, end_x, end_y);
-			if (mouse & SDL_BUTTON(1))
+			if (mouse & SDL_BUTTON_MASK(1))
 				DrawSelectionRectangle(orig_x, orig_y, copy_x, copy_y);
 			drawnRectCount = MAX_RECTS;
 			end_x = copy_x;
 			end_y = copy_y;
-			if ((mouse & SDL_BUTTON(1)) == 0) {
+			if ((mouse & SDL_BUTTON_MASK(1)) == 0) {
 				if (orig_x == copy_x && orig_y == copy_y) {
 					copyStatus = COPY_IDLE;
 				} else {
@@ -1447,7 +1473,7 @@ void ProcessCopySelection(int selectAll)
 			}
 			break;
 		case COPY_DEFINED:
-			if (mouse & SDL_BUTTON(1)) {
+			if (mouse & SDL_BUTTON_MASK(1)) {
 				copyStatus = COPY_STARTED;
 				DrawSelectionRectangle(orig_x, orig_y, end_x, end_y);
 				orig_x = end_x = copy_x;
@@ -1481,20 +1507,29 @@ void trs_select_all()
 /*
  * Flush output to X server
  */
-inline void trs_x_flush()
+void trs_x_flush()
 {
-  if (!trs_emu_mouse) 
-      {
-      ProcessCopySelection(requestSelectAll);
-      }
-  requestSelectAll = FALSE;
-  if (drawnRectCount == 0)
-    return;
-  if (drawnRectCount == MAX_RECTS)
-	SDL_UpdateRect(screen,0,0,0,0);
-  else
-    SDL_UpdateRects(screen,drawnRectCount,drawnRects);
-  drawnRectCount = 0;
+	SDL_Surface *texture_surface;
+	if (!trs_emu_mouse) {
+		ProcessCopySelection(requestSelectAll);
+	}
+	requestSelectAll = FALSE;
+	
+	if( !SDL_LockTextureToSurface(texture,NULL,&texture_surface) ) {
+		error("Couldn't lock screen texture: %s",SDL_GetError());
+		return;
+	}
+	if( !SDL_BlitSurface(screen,NULL,texture_surface,NULL) ) {
+		error("Couldn't Blit screen surface to texture");
+		return;
+	}
+	SDL_UnlockTexture(texture);
+	if( !SDL_RenderTexture(renderer,texture,NULL,NULL) ) {
+		error("Couldn't render screen texture");
+		return;
+	}
+	SDL_RenderPresent(renderer);
+	drawnRectCount = 0;
 }
 
 char *trs_get_copy_data()
@@ -1572,494 +1607,473 @@ char *trs_get_copy_data()
  */ 
 void trs_get_event(int wait)
 {
-  SDL_Event event;
-  SDL_keysym keysym;
-  Uint32 keyup;
-  int ret;
+	SDL_Event event;
+	SDL_KeyboardEvent keyevt;
+	Uint32 keyup;
+	int ret;
 
-  if (trs_model > 1) {
-    (void)trs_uart_check_avail();
-  }
+	if (trs_model > 1) {
+		(void)trs_uart_check_avail();
+	}
 
-  trs_x_flush();
+	trs_x_flush();
 
-  do {
-    if (paste_state != PASTE_IDLE) {
-		static unsigned short paste_key_uni;
-		
-  	    if (SDL_PollEvent(&event)) {
-			if (event.type == SDL_KEYDOWN) {
-				if (paste_state == PASTE_KEYUP) {
-					trs_xlate_keysym(0x10000 | paste_key_uni);
+	do {
+		if (paste_state != PASTE_IDLE) {
+			static unsigned short paste_key_uni;
+
+			if (SDL_PollEvent(&event)) {
+				if (event.type == SDL_EVENT_KEY_DOWN) {
+					if (paste_state == PASTE_KEYUP) {
+						trs_xlate_keysym(paste_key_uni,0);
+					}
+					paste_state = PASTE_IDLE;
+					return;
 				}
-				paste_state = PASTE_IDLE;
+			}
+
+			if (paste_state == PASTE_GETNEXT) {
+				if (!PasteManagerGetChar(&paste_key_uni)) 
+					paste_lastkey = TRUE;
+				else
+					paste_lastkey = FALSE;
+				trs_xlate_keysym(paste_key_uni,1);
+				paste_state = PASTE_KEYDOWN;
 				return;
+			} else	if (paste_state == PASTE_KEYDOWN) {
+				trs_xlate_keysym(paste_key_uni,0);
+				paste_state = PASTE_KEYUP;
+				return;
+			} else if (paste_state == PASTE_KEYUP) {
+				if (paste_lastkey)
+					paste_state = PASTE_IDLE;
+				else
+					paste_state = PASTE_GETNEXT;
 			}
 		}
 
-		if (paste_state == PASTE_GETNEXT) {
-			if (!PasteManagerGetChar(&paste_key_uni)) 
-				paste_lastkey = TRUE;
-			else
-				paste_lastkey = FALSE;
-			trs_xlate_keysym(paste_key_uni);
-			paste_state = PASTE_KEYDOWN;
-			return;
-		} else	if (paste_state == PASTE_KEYDOWN) {
-			trs_xlate_keysym(0x10000 | paste_key_uni);
-			paste_state = PASTE_KEYUP;
-			return;
-		} else if (paste_state == PASTE_KEYUP) {
-			if (paste_lastkey)
-				paste_state = PASTE_IDLE;
-			else
-				paste_state = PASTE_GETNEXT;
-		}
-    }
-		  
-    if (wait) {
-      SDL_WaitEvent(&event);
-    } else {
-      if (!SDL_PollEvent(&event)) return;
-    }
-    switch(event.type) {
-    case SDL_QUIT:
-     trs_exit();
-     break;
-    case SDL_ACTIVEEVENT:
-      if (event.active.state & SDL_APPACTIVE) {
-        if (event.active.gain) {
-#if XDEBUG
-          debug("Active\n");
+		if (wait) {
+#ifdef __EMSRCRIPTEN__
+			while( !SDL_PollEvent(&event) ) { emscripten_sleep(100); }
+#else
+			SDL_WaitEvent(&event);
 #endif
-          trs_screen_refresh();
-          }
-      }
-      break;
+		} else {
+			if (!SDL_PollEvent(&event)) return;
+		}
+		switch(event.type) {
+			case SDL_EVENT_QUIT:
+				trs_exit();
+				break;
+			/*
+			case SDL_ACTIVEEVENT:
+				if (event.active.state & SDL_APPACTIVE) {
+					if (event.active.gain) {
+#if XDEBUG
+						debug("Active\n");
+#endif
+						trs_screen_refresh();
+					}
+				}
+				break;
+			*/
+			case SDL_EVENT_KEY_DOWN:
+				keyevt  = event.key;
+#if XDEBUG
+				debug("KeyDown: mod 0x%x, scancode 0x%x keycode 0x%x\n",
+				      keyevt.mod, keyevt.scancode, keyevt.key);
+#endif
+#ifdef MACOSX
+				if (keyevt.mod & MENU_MOD == 0) {
+#else
+				if (keyevt.mod & SDL_KMOD_CTRL == 0) {
+#endif
+				if (copyStatus != COPY_IDLE)
+					copyStatus = COPY_CLEAR;
+				}
+#ifdef MACOSX
+				else if (keyevt.key != SDLK_C && 
+					keyevt.key != SDLK_LMETA && 
+					keyevt.key != SDLK_RMETA) {
+#else
+				else if (keyevt.key != SDLK_C &&
+					keyevt.key != SDLK_LCTRL &&
+					keyevt.key != SDLK_RCTRL) {
+#endif
+				if (copyStatus != COPY_IDLE)
+					copyStatus = COPY_CLEAR;
+				}
 
-    case SDL_KEYDOWN:
-      keysym  = event.key.keysym;
-#if XDEBUG
-        debug("KeyDown: mod 0x%x, scancode 0x%x keycode 0x%x, unicode 0x%x\n",
-	        keysym.mod, keysym.scancode, keysym.sym, keysym.unicode);
+				switch (keyevt.key) {
+				/* Trap some function keys here */
+					case SDLK_F10:
+						if (keyevt.mod & SDL_KMOD_SHIFT) {
+							trs_reset(1);
+							trs_disk_led(-1,0);
+							trs_hard_led(-1,0);
+						}
+						else
+							trs_reset(0);
+						//keyevt.unicode = 0;
+						keyevt.key = 0;
+						break;
+					case SDLK_F11:
+						trs_screen_caption(trs_timer_switch_turbo());
+						//keyevt.unicode = 0;
+						keyevt.key = 0;
+						break;
+					case SDLK_F9:
+						if (!fullscreen)
+							trs_debug();
+						//keyevt.unicode = 0;
+						keyevt.key = 0;
+						break;
+					case SDLK_F8:
+						trs_exit();
+						//keyevt.unicode = 0;
+						keyevt.key = 0;
+						break;
+					case SDLK_F7:
+#ifdef MACOSX
+						if (fullscreen) 
 #endif
+						{
+							trs_pause_audio(1);
+							trs_gui();
+							trs_pause_audio(0);
+							trs_screen_refresh();
+							trs_x_flush();
+							//keyevt.unicode = 0;
+							keyevt.key = 0;
+						}
 #ifdef MACOSX
-	  if (keysym.mod & MENU_MOD == 0) {
-#else
-	  if (keysym.mod & KMOD_CTRL == 0) {
-#endif
-	    if (copyStatus != COPY_IDLE)
-		  copyStatus = COPY_CLEAR;
-	  }
-#ifdef MACOSX
-	  else if (keysym.sym != SDLK_c && 
-		  keysym.sym != SDLK_LMETA && 
-		  keysym.sym != SDLK_RMETA) {
-#else
-	  else if (keysym.sym != SDLK_c &&
-		  keysym.sym != SDLK_LCTRL &&
-		  keysym.sym != SDLK_RCTRL) {
-#endif
-	    if (copyStatus != COPY_IDLE)
-		  copyStatus = COPY_CLEAR;
-	  }
-		  
-      switch (keysym.sym) {
-        /* Trap some function keys here */
-      case SDLK_F10:
-        if (keysym.mod & KMOD_SHIFT) 
-		  {
-          trs_reset(1);
-		  trs_disk_led(-1,0);
-		  trs_hard_led(-1,0);
-		  }
-        else
-          trs_reset(0);
-        keysym.unicode = 0;
-        keysym.sym = 0;
-	    break;
-      case SDLK_F11:
-        trs_screen_caption(trs_timer_switch_turbo());
-        keysym.unicode = 0;
-        keysym.sym = 0;
-        break;
-      case SDLK_F9:
-        if (!fullscreen)
-          trs_debug();
-        keysym.unicode = 0;
-        keysym.sym = 0;
-        break;
-      case SDLK_F8:
-        trs_exit();
-        keysym.unicode = 0;
-        keysym.sym = 0;
-        break;
-      case SDLK_F7:
-#ifdef MACOSX
-        if (fullscreen) 
-#endif		
-	    {
-        SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-        trs_pause_audio(1);
-        trs_gui();
-        trs_pause_audio(0);
-        SDL_EnableKeyRepeat(0,0);
-        trs_screen_refresh();
-        trs_x_flush();
-        keysym.unicode = 0;
-        keysym.sym = 0;
-		}
-#ifdef MACOSX
-        if (fullscreen) {
-          SetControlManagerModel(trs_model, grafyx_get_microlabs());
-          SetControlManagerTurboMode(trs_timer_is_turbo());
-          UpdateMediaManagerInfo();
-        }
+						if (fullscreen) {
+							SetControlManagerModel(trs_model, grafyx_get_microlabs());
+							SetControlManagerTurboMode(trs_timer_is_turbo());
+							UpdateMediaManagerInfo();
+						}
 #endif  
-        break;
-      default:
-        break;
-      }
+						break;
+					default:
+						break;
+				}
 #if !defined(MACOSX)
-      if (keysym.mod & KMOD_CTRL) {
-        char *string;
+				if (keyevt.mod & SDL_KMOD_CTRL) {
+					char *string;
+					switch (keyevt.key) {
+						case SDLK_C:
+							string = trs_get_copy_data();
+							PasteManagerStartCopy(string);
+							//keyevt.unicode = 0;
+							keyevt.key = 0;
+							break;
+						case SDLK_V:
+							PasteManagerStartPaste();
+							//keyevt.unicode = 0;
+							keyevt.key = 0;
+							break;
+						case SDLK_A:
+							requestSelectAll = TRUE;
+							//keyevt.unicode = 0;
+							keyevt.key = 0;
+							break;
+						default:
+							break;
+					}
+				}
+#endif
 
-        switch (keysym.sym) {
-        case SDLK_c:
-          string = trs_get_copy_data();
-          PasteManagerStartCopy(string);
-          keysym.unicode = 0;
-          keysym.sym = 0;
-          break;
-        case SDLK_v:
-          PasteManagerStartPaste();
-          keysym.unicode = 0;
-          keysym.sym = 0;
-          break;
-        case SDLK_a:
-          requestSelectAll = TRUE;
-          keysym.unicode = 0;
-          keysym.sym = 0;
-          break;
-        default:
-          break;
-        }
-      }
-#endif
-      
-      /* Trap the menu keys here */
-      if (keysym.mod & MENU_MOD) {
-        switch (keysym.sym) {
-#ifdef MACOSX        
-        case SDLK_q:
-          trs_exit();
-          break;
-        case SDLK_COMMA:
-          trs_run_mac_prefs();
-          trs_screen_refresh();
-          trs_x_flush();
-          break;
-#if 0				
-        case SDLK_a:
-          ControlManagerAboutApp();
-          break;
-#endif				
-        case SDLK_h: 
-          ControlManagerHideApp();
-          break;
-        case SDLK_m:
-          ControlManagerMiniturize();
-          break;
-        case SDLK_SLASH:
-          ControlManagerShowHelp();
-          break;
-#endif          
-#ifdef _WIN32        
-        case SDLK_F4:
-          trs_exit();
-          break;
-#endif          
-        case SDLK_RETURN:
-          trs_flip_fullscreen();
-          trs_screen_refresh();
-          break;
-        case SDLK_d:
-          if (keysym.mod & KMOD_SHIFT) {
+				/* Trap the menu keys here */
+				if (keyevt.mod & MENU_MOD) {
+					switch (keyevt.key) {
 #ifdef MACOSX
-            if (!fullscreen) {
-              MediaManagerRunHardManagement();
-            } else
+						case SDLK_q:
+							trs_exit();
+							break;
+						case SDLK_COMMA:
+							trs_run_mac_prefs();
+							trs_screen_refresh();
+							trs_x_flush();
+							break;
+	#if 0				
+						case SDLK_A:
+							ControlManagerAboutApp();
+							break;
+	#endif
+						case SDLK_h: 
+							ControlManagerHideApp();
+							break;
+						case SDLK_m:
+							ControlManagerMiniturize();
+							break;
+						case SDLK_SLASH:
+							ControlManagerShowHelp();
+							break;
 #endif
-            {
-              SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-              trs_pause_audio(1);
-              trs_gui_hard_management();
-              trs_pause_audio(0);
-              SDL_EnableKeyRepeat(0,0);
-              trs_screen_refresh();
-              trs_x_flush();
-            }
-          } else {
+#ifdef _WIN32
+						case SDLK_F4:
+							trs_exit();
+							break;
+#endif
+						case SDLK_RETURN:
+							trs_flip_fullscreen();
+							trs_screen_refresh();
+							break;
+						case SDLK_D:
+							if (keyevt.mod & SDL_KMOD_SHIFT) {
 #ifdef MACOSX
-            if (!fullscreen) {
-              MediaManagerRunDiskManagement();
-            } else
+								if (!fullscreen) {
+									MediaManagerRunHardManagement();
+								} else
 #endif
-            {
-              SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-              trs_pause_audio(1);
-              trs_gui_disk_management();
-              trs_pause_audio(0);
-              SDL_EnableKeyRepeat(0,0);
-              trs_screen_refresh();
-              trs_x_flush();
-            }
-          }
-          break;
-        case SDLK_t:
+								{
+									trs_pause_audio(1);
+									trs_gui_hard_management();
+									trs_pause_audio(0);
+									trs_screen_refresh();
+									trs_x_flush();
+								}
+							} else {
 #ifdef MACOSX
-          if (!fullscreen) {
-            MediaManagerRunCassManagement();
-          } else
+								if (!fullscreen) {
+									MediaManagerRunDiskManagement();
+								} else
 #endif
-          {
-            SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-            trs_pause_audio(1);
-            trs_gui_cassette_management();
-            trs_pause_audio(0);
-            SDL_EnableKeyRepeat(0,0);
-            trs_screen_refresh();
-            trs_x_flush();
-          }
-          break;
-        case SDLK_s:
+								{
+									trs_pause_audio(1);
+									trs_gui_disk_management();
+									trs_pause_audio(0);
+									trs_screen_refresh();
+									trs_x_flush();
+								}
+							}
+							break;
+						case SDLK_T:
 #ifdef MACOSX
-          if (!fullscreen) {
-            ControlManagerSaveState();
-          } else
+							if (!fullscreen) {
+								MediaManagerRunCassManagement();
+							} else
 #endif
-          {
-            SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-            trs_pause_audio(1);
-            trs_gui_save_state();   
-            trs_pause_audio(0);
-            SDL_EnableKeyRepeat(0,0);
-            trs_screen_refresh();
-            trs_x_flush();
-          }
-          break;
-        case SDLK_l:
+							{
+								trs_pause_audio(1);
+								trs_gui_cassette_management();
+								trs_pause_audio(0);
+								trs_screen_refresh();
+								trs_x_flush();
+							}
+							break;
+						case SDLK_S:
 #ifdef MACOSX
-          if (!fullscreen) {
-            ControlManagerLoadState();
-          } else
+							if (!fullscreen) {
+								ControlManagerSaveState();
+							} else
 #endif
-          {
-            SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-            trs_pause_audio(1);
-            trs_gui_load_state();   
-            trs_pause_audio(0);
-            SDL_EnableKeyRepeat(0,0);
-            trs_screen_init();
-            grafyx_redraw();
-            trs_screen_refresh();
-            trs_x_flush();
-          }
-          break;
-        case SDLK_w:
+							{
+								trs_pause_audio(1);
+								trs_gui_save_state();
+								trs_pause_audio(0);
+								trs_screen_refresh();
+								trs_x_flush();
+							}
+							break;
+						case SDLK_L:
+	#ifdef MACOSX
+							if (!fullscreen) {
+								ControlManagerLoadState();
+							} else
+	#endif
+							{
+								trs_pause_audio(1);
+								trs_gui_load_state();
+								trs_pause_audio(0);
+								trs_screen_init();
+								grafyx_redraw();
+								trs_screen_refresh();
+								trs_x_flush();
+							}
+							break;
+						case SDLK_W:
 #ifdef MACOSX
-          if (!fullscreen) {
-            ControlManagerWriteConfig();
-          } else
+							if (!fullscreen) {
+							ControlManagerWriteConfig();
+							} else
 #endif
-          {
-            SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-            trs_pause_audio(1);
-            trs_gui_write_config();   
-            trs_pause_audio(0);
-            SDL_EnableKeyRepeat(0,0);
-            trs_screen_refresh();
-            trs_x_flush();
-          }
-          break;
-        case SDLK_r:
+							{
+								trs_pause_audio(1);
+								trs_gui_write_config();
+								trs_pause_audio(0);
+								trs_screen_refresh();
+								trs_x_flush();
+							}
+							break;
+						case SDLK_R:
 #ifdef MACOSX
-          if (!fullscreen) {
-            ControlManagerReadConfig();
-          } else
+							if (!fullscreen) {
+								ControlManagerReadConfig();
+							} else
 #endif
-          {
-            SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-            trs_pause_audio(1);
-            ret = trs_gui_read_config();   
-            trs_pause_audio(0);
-            SDL_EnableKeyRepeat(0,0);
-            if (!ret) {
-              trs_screen_init();
-              grafyx_redraw();
-              trs_screen_refresh();
-              trs_x_flush();
-            }
-          }
-          break;
-        case SDLK_EQUALS:
-          scale_x++;
-          if (scale_x > MAX_SCALE)
-            scale_x = 1;
-          scale_y = scale_x * 2;
-          trs_screen_init();
-          grafyx_redraw();
-          trs_screen_refresh();
-          trs_x_flush();
-          break;
-        case SDLK_MINUS:
-          scale_x--;
-          if (scale_x < 1)
-            scale_x = MAX_SCALE;
-          scale_y = scale_x * 2;
-          trs_screen_init();
-          grafyx_redraw();
-          trs_screen_refresh();
-          trs_x_flush();
-          break;
-        case SDLK_p:
-          trs_paused = !trs_paused;
-          if (!trs_paused)
-            trs_screen_refresh();
-          break;
-#ifdef MACOSX				
-		case SDLK_v:
-			SDLMainPaste();
-			break;
-		case SDLK_c:
-			SDLMainCopy();
-			break;
-		case SDLK_a:
-			SDLMainSelectAll();
-			break;
-#endif				
-        case SDLK_0:
-		case SDLK_1:
-        case SDLK_2:
-        case SDLK_3:
-        case SDLK_4:
-        case SDLK_5:
-        case SDLK_6:
-        case SDLK_7:
+							{
+								trs_pause_audio(1);
+								ret = trs_gui_read_config();
+								trs_pause_audio(0);
+								if (!ret) {
+									trs_screen_init();
+									grafyx_redraw();
+									trs_screen_refresh();
+									trs_x_flush();
+								}
+							}
+							break;
+						case SDLK_EQUALS:
+							scale_x++;
+							if (scale_x > MAX_SCALE)
+								scale_x = 1;
+							scale_y = scale_x * 2;
+							trs_screen_init();
+							grafyx_redraw();
+							trs_screen_refresh();
+							trs_x_flush();
+							break;
+						case SDLK_MINUS:
+							scale_x--;
+							if (scale_x < 1)
+								scale_x = MAX_SCALE;
+							scale_y = scale_x * 2;
+							trs_screen_init();
+							grafyx_redraw();
+							trs_screen_refresh();
+							trs_x_flush();
+							break;
+						case SDLK_P:
+							trs_paused = !trs_paused;
+							if (!trs_paused)
+								trs_screen_refresh();
+							break;
 #ifdef MACOSX
-          if (!fullscreen) {
-            if (keysym.mod & KMOD_SHIFT) 
-               MediaManagerRemoveDisk(keysym.sym-SDLK_0);
-            else
-               MediaManagerInsertDisk(keysym.sym-SDLK_0);
-          } else
+						case SDLK_V:
+							SDLMainPaste();
+							break;
+						case SDLK_C:
+							SDLMainCopy();
+							break;
+						case SDLK_A:
+							SDLMainSelectAll();
+							break;
 #endif
-          {
-            char filename[FILENAME_MAX];
-            char browse_dir[FILENAME_MAX];
+						case SDLK_0:
+						case SDLK_1:
+						case SDLK_2:
+						case SDLK_3:
+						case SDLK_4:
+						case SDLK_5:
+						case SDLK_6:
+						case SDLK_7:
+#ifdef MACOSX
+							if (!fullscreen) {
+								if (keyevt.mod & SDL_KMOD_SHIFT) 
+									MediaManagerRemoveDisk(keyevt.key-SDLK_0);
+								else
+									MediaManagerInsertDisk(keyevt.key-SDLK_0);
+							} else
+#endif
+							{
+								char filename[FILENAME_MAX];
+								char browse_dir[FILENAME_MAX];
 
-            if (keysym.mod & KMOD_SHIFT) {
-              trs_disk_remove(keysym.sym-SDLK_0);
-            } else {
-              SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, 
-                                  SDL_DEFAULT_REPEAT_INTERVAL);
-              trs_expand_dir(trs_disk_dir, browse_dir);
-              if (trs_gui_file_browse(browse_dir, filename,0,
-                                      " Floppy Disk Image ") != -1)
-                trs_disk_insert(keysym.sym-SDLK_0, filename);
-              SDL_EnableKeyRepeat(0,0);
-              trs_screen_refresh();
-              trs_x_flush();
-            }
-          }
-          break;
-        default:
-          break;
-        }
-        if (trs_paused)
-          trs_gui_display_pause();
+								if (keyevt.mod & SDL_KMOD_SHIFT) {
+									trs_disk_remove(keyevt.key-SDLK_0);
+								} else {
+									trs_expand_dir(trs_disk_dir, browse_dir);
+									if (trs_gui_file_browse(browse_dir, filename,0," Floppy Disk Image ") != -1)
+										trs_disk_insert(keyevt.key-SDLK_0, filename);
+									trs_screen_refresh();
+									trs_x_flush();
+								}
+							}
+							break;
+						default:
+							break;
+					}
+					if (trs_paused)
+						trs_gui_display_pause();
 #ifdef MACOSX
-        if (!fullscreen) {
-          SetControlManagerModel(trs_model, grafyx_get_microlabs());
-          SetControlManagerTurboMode(trs_timer_is_turbo());
-          UpdateMediaManagerInfo();
-        }
+					if (!fullscreen) {
+						SetControlManagerModel(trs_model, grafyx_get_microlabs());
+						SetControlManagerTurboMode(trs_timer_is_turbo());
+						UpdateMediaManagerInfo();
+					}
 #endif  
-        break;
-      }
+					break;
+				}
 
-      if (trs_paused) {
-        trs_gui_display_pause();
-        break;
-      }
-              
-      if ( ((keysym.mod & (KMOD_CAPS|KMOD_LSHIFT))
-	    	== (KMOD_CAPS|KMOD_LSHIFT) ||
-           ((keysym.mod & (KMOD_CAPS|KMOD_RSHIFT))
-	    	== (KMOD_CAPS|KMOD_RSHIFT)))
-	       && keysym.unicode >= 'A' && keysym.unicode <= 'Z')  {
-	  /* Make Shift + CapsLock give lower case */
-         keysym.unicode = (int) keysym.unicode + 0x20;
-      }
-      if (keysym.sym == SDLK_RSHIFT && trs_model == 1) {
-        keysym.sym = SDLK_LSHIFT;
-      }
-     
-      if (last_key[keysym.scancode] != 0) {
-        trs_xlate_keysym(0x10000 | last_key[keysym.scancode]);
-       }
-      if (keysym.sym < 0x100 && keysym.unicode >= 0x20 && keysym.unicode <= 0xFF) {
-         last_key[keysym.scancode] = keysym.unicode;
-         trs_xlate_keysym(keysym.unicode);
-         }
-      else if (keysym.sym != 0) {
-        last_key[keysym.scancode] = keysym.sym;
-        trs_xlate_keysym(keysym.sym);
-        }
-      break;
+				if (trs_paused) {
+					trs_gui_display_pause();
+					break;
+				}
 
-    case SDL_KEYUP:
-      keysym  = event.key.keysym;
+printf("[1] keyevt.key: %02x/%c  keyevt.mod: %02x\n",keyevt.key ,keyevt.key,keyevt.mod);
+				if ( ( (keyevt.mod & SDL_KMOD_SHIFT) || 
+				       (keyevt.mod & SDL_KMOD_CAPS) ) &&
+				     (keyevt.key >= 'a' && keyevt.key <= 'z') )  {
+					// Make Shift + CapsLock give lower case
+					keyevt.key = (int) keyevt.key - 0x20;
+				}
+printf("[1] keyevt.key: %02x/%c\n",keyevt.key ,keyevt.key);
+				if (keyevt.key == SDLK_RSHIFT && trs_model == 1) {
+					keyevt.key = SDLK_LSHIFT;
+				}
+
+				if (last_key[keyevt.scancode] != 0) {
+					trs_xlate_keysym(last_key[keyevt.scancode],0);
+				}
+				if (keyevt.key != 0) {
+					last_key[keyevt.scancode] = keyevt.key;
+					trs_xlate_keysym(keyevt.key,1);
+				}
+				break;
+
+			case SDL_EVENT_KEY_UP:
+				keyevt  = event.key;
 #if XDEBUG
-      debug("KeyUp: mod 0x%x, scancode 0x%x keycode 0x%x, unicode 0x%x\n",
-	      keysym.mod, keysym.scancode, keysym.sym, keysym.unicode);
+				debug("KeyUp: mod 0x%x, scancode 0x%x keycode 0x%x\n",
+				      keyevt.mod, keyevt.scancode, keyevt.key);
 #endif
-      if (keysym.mod & MENU_MOD)
-        break;
-      keyup = last_key[event.key.keysym.scancode];
-      last_key[event.key.keysym.scancode] = 0;
-      trs_xlate_keysym(0x10000 | keyup);
-      break;
+				if (keyevt.mod & MENU_MOD)
+					break;
+				keyup = last_key[keyevt.scancode];
+				last_key[keyevt.scancode] = 0;
+				trs_xlate_keysym(keyup,0);
+				break;
 
-    case SDL_JOYAXISMOTION:
-      trs_joy_axis(event.jaxis.axis, event.jaxis.value);
-      break;
+			case SDL_EVENT_JOYSTICK_AXIS_MOTION:
+				trs_joy_axis(event.jaxis.axis, event.jaxis.value);
+				break;
 
-    case SDL_JOYHATMOTION:
-      trs_joy_hat(event.jhat.value);
-      break;
+			case SDL_EVENT_JOYSTICK_HAT_MOTION:
+				trs_joy_hat(event.jhat.value);
+				break;
 
-    case SDL_JOYBUTTONUP:
-      trs_joy_button_up();
-      break;
+			case SDL_EVENT_JOYSTICK_BUTTON_UP:
+				trs_joy_button_up();
+				break;
 
-    case SDL_JOYBUTTONDOWN:
-      trs_joy_button_down();
-      break;
+			case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+				trs_joy_button_down();
+				break;
 
 #ifdef MACOSX
-    case SDL_USEREVENT:
-      trs_handle_mac_events(&event);
-      break;
+			case SDL_USEREVENT:
+				trs_handle_mac_events(&event);
+				break;
 #endif
 
-    default:
+			default:
 #if XDEBUG	    
-//      debug("Unhandled event: type %d\n", event.type);
+				//debug("Unhandled event: type %d\n", event.type);
 #endif
-      break;
-    }
-  } while (!wait);
+				break;
+		}
+	} while (!wait);
 }
 
 void trs_screen_expanded(int flag)
@@ -2067,7 +2081,7 @@ void trs_screen_expanded(int flag)
   int bit = flag ? EXPANDED : 0;
   if ((currentmode ^ bit) & EXPANDED) {
     currentmode ^= EXPANDED;
-	SDL_FillRect(screen,NULL,background);
+	SDL_FillSurfaceRect(screen,NULL,background);
     trs_screen_refresh();
   }
 }
@@ -2119,7 +2133,7 @@ void trs_screen_640x240(int flag)
     top_margin = (TRS_CHAR_HEIGHT4 * scale_y * 24 -
 	  	      cur_char_height * col_chars)/2 + border_width;
     if (left_margin > border_width || top_margin > border_width) 
-      SDL_FillRect(screen,NULL,background);
+      SDL_FillSurfaceRect(screen,NULL,background);
   }
   trs_screen_refresh();
 }
@@ -2170,17 +2184,15 @@ boxes_init(int foreground, int background, int width, int height, int expanded)
 
   for (graphics_char = 0; graphics_char < 64; ++graphics_char) {
     if (trs_box[expanded][graphics_char])
-      SDL_FreeSurface(trs_box[expanded][graphics_char]);
+      SDL_DestroySurface(trs_box[expanded][graphics_char]);
     trs_box[expanded][graphics_char] =
-	  SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 32, 
-                           0x00ff0000, 0x0000ff00,0x000000ff,0);
-
+      SDL_CreateSurface(width,height,SDL_PIXELFORMAT_XRGB8888);
     /* Clear everything */
-    SDL_FillRect(trs_box[expanded][graphics_char], &fullrect, background);
+    SDL_FillSurfaceRect(trs_box[expanded][graphics_char], &fullrect, background);
     
     for (bit = 0, p = 0; bit < 6; ++bit) {
       if (graphics_char & (1 << bit)) {
-      	SDL_FillRect(trs_box[expanded][graphics_char], &bits[bit], foreground);
+      	SDL_FillSurfaceRect(trs_box[expanded][graphics_char], &bits[bit], foreground);
       }
     }
   }
@@ -2237,9 +2249,8 @@ SDL_Surface *CreateSurfaceFromDataScale(char *data,
   
   free(mypixels);
   
-  return(SDL_CreateRGBSurfaceFrom(mydata, width*scale_x, height*scale_y, 32, width*scale_x*4,
-                                  0x00ff0000, 0x0000ff00,
-                                  0x000000ff,0));
+	return(SDL_CreateSurfaceFrom(width*scale_x,height*scale_y,
+	                             SDL_PIXELFORMAT_XRGB8888, mydata, width*scale_x*4));
 }
 
 void bitmap_init(unsigned long foreground, unsigned long background)
@@ -2250,7 +2261,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
     for (i = 0; i < MAXCHARS; i++) {
       if (trs_char[0][i]) {
          free(trs_char[0][i]->pixels);
-         SDL_FreeSurface(trs_char[0][i]);
+         SDL_DestroySurface(trs_char[0][i]);
          }
       trs_char[0][i] =
 	    CreateSurfaceFromDataScale(trs_char_data[trs_charset][i],
@@ -2259,7 +2270,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
 				   scale_x,scale_y);
       if (trs_char[1][i]) {
          free(trs_char[1][i]->pixels);
-         SDL_FreeSurface(trs_char[1][i]);
+         SDL_DestroySurface(trs_char[1][i]);
          }
       trs_char[1][i] =
 	    CreateSurfaceFromDataScale(trs_char_data[trs_charset][i],
@@ -2268,7 +2279,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
 				   scale_x*2,scale_y);
       if (trs_char[2][i]) {
          free(trs_char[2][i]->pixels);
-         SDL_FreeSurface(trs_char[2][i]);
+         SDL_DestroySurface(trs_char[2][i]);
          }
       trs_char[2][i] =
 	    CreateSurfaceFromDataScale(trs_char_data[trs_charset][i],
@@ -2277,7 +2288,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
 				   scale_x,scale_y);
       if (trs_char[3][i]) {
          free(trs_char[3][i]->pixels);
-         SDL_FreeSurface(trs_char[3][i]);
+         SDL_DestroySurface(trs_char[3][i]);
          }
       trs_char[3][i] =
 	    CreateSurfaceFromDataScale(trs_char_data[trs_charset][i],
@@ -2286,7 +2297,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
 				   scale_x*2,scale_y);
       if (trs_char[4][i]) {
          free(trs_char[4][i]->pixels);
-         SDL_FreeSurface(trs_char[4][i]);
+         SDL_DestroySurface(trs_char[4][i]);
          }
       /* For the GUI, make sure we have a backslash , not arrow */
       if (i=='\\')
@@ -2309,7 +2320,7 @@ void bitmap_init(unsigned long foreground, unsigned long background)
 				     scale_x,scale_y);
       if (trs_char[5][i]) {
          free(trs_char[5][i]->pixels);
-         SDL_FreeSurface(trs_char[5][i]);
+         SDL_DestroySurface(trs_char[5][i]);
          }
       if (i=='\\')
         trs_char[5][i] =
@@ -2421,7 +2432,7 @@ void trs_disk_led(int drive, int on_off)
     if (drive == -1) {
       for (i=0;i<8;i++) {
         rect.x = drive0_led_x + 24*scale_x*i;
-        SDL_FillRect(screen, &rect, light_red);
+        SDL_FillSurfaceRect(screen, &rect, light_red);
         addToDrawList(&rect);
 #ifdef MACOSX
         MediaManagerStatusLed(i,0);
@@ -2431,7 +2442,7 @@ void trs_disk_led(int drive, int on_off)
     if (on_off) {
       if (countdown[drive] == 0) {
         rect.x = drive0_led_x + 24*scale_x*drive;
-        SDL_FillRect(screen, &rect, bright_red);
+        SDL_FillSurfaceRect(screen, &rect, bright_red);
         addToDrawList(&rect);
 #ifdef MACOSX
         MediaManagerStatusLed(drive,1);
@@ -2445,7 +2456,7 @@ void trs_disk_led(int drive, int on_off)
           countdown[i]--;
           if (countdown[i] == 0) {
             rect.x = drive0_led_x + 24*scale_x*i;
-            SDL_FillRect(screen, &rect, light_red);
+            SDL_FillSurfaceRect(screen, &rect, light_red);
             addToDrawList(&rect);
 #ifdef MACOSX
             MediaManagerStatusLed(i,0);
@@ -2472,7 +2483,7 @@ void trs_hard_led(int drive, int on_off)
     if (drive == -1) {
       for (i=0;i<4;i++) {
         rect.x = drive0_led_x + 24*scale_x*i;
-        SDL_FillRect(screen, &rect, light_red);
+        SDL_FillSurfaceRect(screen, &rect, light_red);
         addToDrawList(&rect);
 #ifdef MACOSX
         MediaManagerStatusLed(i+8, 0);
@@ -2482,7 +2493,7 @@ void trs_hard_led(int drive, int on_off)
     if (on_off) {
       if (countdown[drive] == 0) {
         rect.x = drive0_led_x + 24*scale_x*drive;
-        SDL_FillRect(screen, &rect, bright_red);
+        SDL_FillSurfaceRect(screen, &rect, bright_red);
         addToDrawList(&rect);
 #ifdef MACOSX
         MediaManagerStatusLed(drive+8, 1);
@@ -2496,7 +2507,7 @@ void trs_hard_led(int drive, int on_off)
           countdown[i]--;
           if (countdown[i] == 0) {
             rect.x = drive0_led_x + 24*scale_x*i;
-            SDL_FillRect(screen, &rect, light_red);
+            SDL_FillSurfaceRect(screen, &rect, light_red);
             addToDrawList(&rect);
 #ifdef MACOSX
             MediaManagerStatusLed(i+8, 0);
@@ -3208,9 +3219,9 @@ hrg_write_data(int data)
       }
     }
     for (i=0;i<n0;i++)
-       SDL_FillRect(screen, &rect0[i], background);
+       SDL_FillSurfaceRect(screen, &rect0[i], background);
     for (i=0;i<n1;i++)
-       SDL_FillRect(screen, &rect0[i], foreground);
+       SDL_FillSurfaceRect(screen, &rect0[i], foreground);
   }
   else {
     /* Unfortunately, HRG1B combines text and graphics with an
@@ -3278,7 +3289,7 @@ hrg_update_char(int position)
     prev_byte = byte;
   }
   for (i=0;i<n;i++)
-  	SDL_FillRect(screen, &rect[i], foreground);
+  	SDL_FillSurfaceRect(screen, &rect[i], foreground);
 }
 
 
@@ -3290,40 +3301,42 @@ int mouse_last_x = -1, mouse_last_y = -1;
 unsigned int mouse_last_buttons;
 int mouse_old_style = 0;
 
-void trs_get_mouse_pos(int *x, int *y, unsigned int *buttons)
-{
-  int win_x, win_y;
-  Uint8 mask;
-  
-  mask = SDL_GetMouseState(&win_x, &win_y);
+void trs_get_mouse_pos(int *x, int *y, unsigned int *buttons) {
+	float fwin_x, fwin_y;
+	int win_x, win_y;
+	Uint8 mask;
+
+	mask = SDL_GetMouseState(&fwin_x, &fwin_y);
+	win_x = fwin_x;
+	win_y = fwin_y;
 #if MOUSEDEBUG
-  debug("get_mouse %d %d 0x%x ->", win_x, win_y, mask);
+	debug("get_mouse %d %d 0x%x ->", win_x, win_y, mask);
 #endif
-  if (win_x >= 0 && win_x < OrigWidth &&
-      win_y >= 0 && win_y < OrigHeight) {
-    /* Mouse is within emulator window */
-    if (win_x < left_margin) win_x = left_margin;
-    if (win_x >= OrigWidth - left_margin) win_x = OrigWidth - left_margin - 1;
-    if (win_y < top_margin) win_y = top_margin;
-    if (win_y >= OrigHeight - top_margin) win_y = OrigHeight - top_margin - 1;
-    *x = mouse_last_x = (win_x - left_margin)
-                        * mouse_x_size
-                        / (OrigWidth - 2*left_margin);
-    *y = mouse_last_y = (win_y - top_margin) 
-                        * mouse_y_size
-                        / (OrigHeight - 2*top_margin);
-    mouse_last_buttons = 7;
-    /* !!Note: assuming 3-button mouse */
-    if (mask & SDL_BUTTON(1)) mouse_last_buttons &= ~4;
-    if (mask & SDL_BUTTON(2)) mouse_last_buttons &= ~2;
-    if (mask & SDL_BUTTON(3)) mouse_last_buttons &= ~1;
-  }
-  *x = mouse_last_x;
-  *y = mouse_last_y;
-  *buttons = mouse_last_buttons;
+	if (win_x >= 0 && win_x < OrigWidth && 
+	    win_y >= 0 && win_y < OrigHeight) {
+		/* Mouse is within emulator window */
+		if (win_x < left_margin) win_x = left_margin;
+		if (win_x >= OrigWidth - left_margin) win_x = OrigWidth - left_margin - 1;
+		if (win_y < top_margin) win_y = top_margin;
+		if (win_y >= OrigHeight - top_margin) win_y = OrigHeight - top_margin - 1;
+		*x = mouse_last_x = (win_x - left_margin)
+		                     * mouse_x_size
+                             / (OrigWidth - 2*left_margin);
+		*y = mouse_last_y = (win_y - top_margin) 
+		                     * mouse_y_size
+		                     / (OrigHeight - 2*top_margin);
+		mouse_last_buttons = 7;
+		/* !!Note: assuming 3-button mouse */
+		if (mask & SDL_BUTTON_MASK(1)) mouse_last_buttons &= ~4;
+		if (mask & SDL_BUTTON_MASK(2)) mouse_last_buttons &= ~2;
+		if (mask & SDL_BUTTON_MASK(3)) mouse_last_buttons &= ~1;
+	}
+	*x = mouse_last_x;
+	*y = mouse_last_y;
+	*buttons = mouse_last_buttons;
 #if MOUSEDEBUG
-  debug("%d %d 0x%x\n",
-	  mouse_last_x, mouse_last_y, mouse_last_buttons);
+	debug("%d %d 0x%x\n",
+	      mouse_last_x, mouse_last_y, mouse_last_buttons);
 #endif
 }
 
@@ -3343,7 +3356,7 @@ void trs_set_mouse_pos(int x, int y)
 #if MOUSEDEBUG
   debug("set_mouse %d %d -> %d %d\n", x, y, dest_x, dest_y);
 #endif
-  SDL_WarpMouse(dest_x, dest_y);
+  SDL_WarpMouseInWindow(window, dest_x, dest_y);
 }
 
 void trs_get_mouse_max(int *x, int *y, unsigned int *sens)

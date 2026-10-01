@@ -66,7 +66,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 
 #define CLOSE		0
 #define READ		1
@@ -102,6 +102,8 @@ int cassette_default_sample_rate = DEFAULT_SAMPLE_RATE;
 static int cassette_stereo = 0;
 static Uint32 cassette_silence;
 static int soundDeviceOpen = FALSE;
+static SDL_AudioStream *stream = NULL;
+static SDL_AudioDeviceID dev;
 
 /* Windows won't work with a sound fragment size smaller than 2048,
    or you get gaps in sound */
@@ -111,7 +113,7 @@ static int soundDeviceOpen = FALSE;
 #define FRAGSIZE 9
 #endif
 #define SOUND_RING_SIZE (1<<(FRAGSIZE+8))
-static int cassette_afmt = AUDIO_U8;
+static int cassette_afmt = SDL_AUDIO_U8;
 static Uint8 sound_ring[SOUND_RING_SIZE];
 static Uint8 *sound_ring_read_ptr = sound_ring;
 static Uint8 *sound_ring_write_ptr = sound_ring;
@@ -313,20 +315,22 @@ put_sample(Uchar sample, int convert, FILE* f)
 {
   Uint16 two_byte;
 
+  if( !stream ) { return; }
+
   if (convert) {
     switch (cassette_afmt) {
-    case AUDIO_U8:
-	  SDL_LockAudio();
+    case SDL_AUDIO_U8:
+	  SDL_LockAudioStream(stream);
 	  *sound_ring_write_ptr++ = sample;
 	  if (sound_ring_write_ptr >= sound_ring_end) {
 		sound_ring_write_ptr = sound_ring;
         }
 	  sound_ring_count++;
-	  SDL_UnlockAudio();
+	  SDL_UnlockAudioStream(stream);
       break;
-    case AUDIO_S16:
+    case SDL_AUDIO_S16:
    	  two_byte = (sample << 8) - 0x8000;
-	  SDL_LockAudio();
+	  SDL_LockAudioStream(stream);
 	  *sound_ring_write_ptr++ =  two_byte & 0xFF;
 	  if (sound_ring_write_ptr >= sound_ring_end)
 		sound_ring_write_ptr = sound_ring;
@@ -334,7 +338,7 @@ put_sample(Uchar sample, int convert, FILE* f)
 	  if (sound_ring_write_ptr >= sound_ring_end)
 		sound_ring_write_ptr = sound_ring;
 	  sound_ring_count+=2;
-	  SDL_UnlockAudio();
+	  SDL_UnlockAudioStream(stream);
       break;
     default:
       error("sample format 0x%x not supported", cassette_afmt);
@@ -454,35 +458,51 @@ parse_wav_header(FILE *f)
   return 0;
 }  
 
-static void trs_sdl_sound_update(void *userdata, Uint8 * stream, int len)
-{
+static void trs_sdl_sound_update(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
+  int i;
   if (sound_ring_count == 0) {
-    memset (stream, cassette_silence, len); 
+	for( i=0; i<total_amount; i++ ) {
+    	SDL_PutAudioStreamData(stream, &cassette_silence, 1);
+	}
   } else {
+	int len;
 	int num_to_read;
 	
-	if (sound_ring_count > len)
-	   num_to_read = len;
-	else 
-	   num_to_read = sound_ring_count;
+	if (sound_ring_count > total_amount) {
+       len = total_amount;
+       num_to_read = len;
+    }
+    else if (sound_ring_count > additional_amount) {
+       len = additional_amount;
+       num_to_read = len;
+	}
+	else {
+       len = additional_amount;
+       num_to_read = sound_ring_count;
+	}
 	   
     if (sound_ring_read_ptr + num_to_read > sound_ring_end) {
 	  int len_to_end = sound_ring_end - sound_ring_read_ptr;
-	   
-      memcpy(stream, sound_ring_read_ptr, len_to_end);
-	  memcpy(stream + len_to_end, sound_ring,  num_to_read - len_to_end);
-  	  memset(stream, cassette_silence, len - num_to_read);
+
+      SDL_PutAudioStreamData(stream, sound_ring_read_ptr, len_to_end);
+      SDL_PutAudioStreamData(stream, sound_ring, num_to_read - len_to_end);
+		for( i=0; i<(len - num_to_read); i++ ) {
+			SDL_PutAudioStreamData(stream, &cassette_silence, 1);
+		}
+      //SDL_PutAudioStreamData(stream, cassette_silence, len - num_to_read);
       sound_ring_read_ptr = sound_ring + num_to_read - len_to_end;
 	} else {
-      memcpy(stream, sound_ring_read_ptr, num_to_read);
-  	  memset(stream, cassette_silence, len - num_to_read);
+      SDL_PutAudioStreamData(stream, sound_ring_read_ptr, num_to_read);
+		for( i=0; i<(len - num_to_read); i++ ) {
+			SDL_PutAudioStreamData(stream, &cassette_silence, 1);
+		}
+      //SDL_PutAudioStreamData(stream, cassette_silence, len - num_to_read);
 	  sound_ring_read_ptr += num_to_read;
 	  if (sound_ring_read_ptr == sound_ring_end)
 	     sound_ring_read_ptr = sound_ring;
 	}
 	sound_ring_count -= num_to_read;
   }
-
 }
 
 static int
@@ -490,23 +510,32 @@ set_audio_format(int state)
 {
   SDL_AudioSpec desired, obtained;
   
-  SDL_CloseAudio();
-  soundDeviceOpen = FALSE;
-        
+  if( soundDeviceOpen ) {
+    if( stream ) {
+      SDL_DestroyAudioStream(stream);
+      stream = NULL;
+    }
+    SDL_CloseAudioDevice(dev);
+    soundDeviceOpen = FALSE;
+  }
+  
   desired.freq = cassette_sample_rate;
-  desired.format = AUDIO_U8;
-  desired.samples = 1 << FRAGSIZE;
-  desired.callback = trs_sdl_sound_update;
-  desired.userdata = NULL;
+  desired.format = SDL_AUDIO_U8;
   desired.channels = (state == ORCH90) ? 2 : 1;
-
-  if (SDL_OpenAudio(&desired, &obtained) < 0) {
+  
+  dev = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&desired);
+  if( !dev ) {
 	error("couldn't open cassette sound device");
 	cassette_state = FAILED;
 	return -1;
   }
   soundDeviceOpen = TRUE;
-  if (obtained.format != AUDIO_U8 && obtained.format != AUDIO_S16) {
+  if( !SDL_GetAudioDeviceFormat(dev, &obtained, NULL) ) {
+      error("could not determined audio format");
+      errno = EINVAL;
+      return -1;
+  }
+  if (obtained.format != SDL_AUDIO_U8 && obtained.format != SDL_AUDIO_S16) {
       error("requested audio format 0x%x, got 0x%x", 
 	        desired.format, obtained.format);
       errno = EINVAL;
@@ -528,9 +557,20 @@ set_audio_format(int state)
   
   cassette_afmt = obtained.format;
   cassette_stereo = (obtained.channels == 2);
-  cassette_silence = obtained.silence;
+  cassette_silence = SDL_GetSilenceValueForFormat(obtained.format);
   
-  SDL_PauseAudio(0);
+  if( !SDL_PauseAudioDevice(dev) ) {
+    error("could not pause audio device");
+    errno = EINVAL;
+    return -1;
+  }
+
+  stream = SDL_OpenAudioDeviceStream(dev,&obtained,trs_sdl_sound_update,NULL);
+  if( !stream ) {
+    error("couldn't create audio stream");
+    errno = EINVAL;
+    return -1;
+  }
 
   return 0;
 }
@@ -621,8 +661,14 @@ int assert_state(int state)
 
   if (cassette_state != CLOSE && cassette_state != FAILED) {
     if (cassette_format == DIRECT_FORMAT) {
-      SDL_CloseAudio();
-      soundDeviceOpen = FALSE;
+      if( soundDeviceOpen ) {
+        if( stream ) {
+          SDL_DestroyAudioStream(stream);
+          stream = NULL;
+        }
+        SDL_CloseAudioDevice(dev);
+        soundDeviceOpen = FALSE;
+      }
       cassette_position = 0;
     } else {
       cassette_position = ftell(cassette_file);
@@ -636,7 +682,7 @@ int assert_state(int state)
     }
 
     cassette_stereo = 0;
-    cassette_afmt = AUDIO_U8;
+    cassette_afmt = SDL_AUDIO_U8;
   }
 
   switch (state) {
@@ -1317,9 +1363,15 @@ trs_cassette_reset()
   assert_state(CLOSE);
 }
 
-void trs_pause_audio(int pause)
-{
-    SDL_PauseAudio(pause);
+void trs_pause_audio(int pause) {
+	if( soundDeviceOpen ) {
+		if( pause && !SDL_AudioDevicePaused(dev) ) {
+			SDL_PauseAudioDevice(dev);
+		}
+		else if( SDL_AudioDevicePaused(dev) ) {
+			SDL_ResumeAudioDevice(dev);
+		}
+	}
 }
 
 void 
@@ -1358,8 +1410,7 @@ trs_cassette_save(FILE *file)
 }
 
 void 
-trs_cassette_load(FILE *file)
-{
+trs_cassette_load(FILE *file) {
   int currentOpened = soundDeviceOpen;
   
   trs_load_filename(file, cassette_filename);
@@ -1391,17 +1442,22 @@ trs_cassette_load(FILE *file)
   trs_load_int(file, &cassette_speed, 1);
   trs_load_int(file, &orch90_left, 1);
   trs_load_int(file, &orch90_right, 1);
-  SDL_LockAudio();
+  //SDL_LockAudio();
   sound_ring_read_ptr = sound_ring;
   sound_ring_write_ptr = sound_ring;
   sound_ring_count = 0;
-  SDL_UnlockAudio();
+  //SDL_UnlockAudio();
   trs_load_int(file, &soundDeviceOpen, 1);
   if (currentOpened != soundDeviceOpen) {
-    if (soundDeviceOpen) {
+    if( soundDeviceOpen ) {
       set_audio_format(cassette_state);
-    } else {
-      SDL_CloseAudio();
+    } else if( currentOpened ) {
+        if( stream ) {
+          SDL_DestroyAudioStream(stream);
+          stream = NULL;
+        }
+        SDL_CloseAudioDevice(dev);
+        soundDeviceOpen = FALSE;
     }
   }
 }

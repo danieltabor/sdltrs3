@@ -45,7 +45,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 #include <sys/stat.h>
 
 #include "z80.h"
@@ -157,14 +157,15 @@ int SDLmain(int argc, char *argv[])
     putenv("SDL_VIDEO_CENTERED=1");
 #endif	
     
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) { 
-        fprintf(stderr, "Failed to initialize SDL library");
+#ifdef __EMSCRIPTEN__
+    if( !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) ) { 
+#else
+    if( !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) ) { 
+#endif
+        fprintf(stderr, "Failed to initialize SDL library: %s",SDL_GetError());
   	    exit(1);
     }
-        
-    /* Enable Unicode key translations */
-    SDL_EnableUNICODE(TRUE); 
-
+	
     argc = trs_parse_command_line(argc, argv, &debug);
     if (argc > 1) {
       fprintf(stderr, "%s: erroneous argument %s\n", program_name, argv[1]);
@@ -204,7 +205,6 @@ int SDLmain(int argc, char *argv[])
     if (init_state_file[0] != 0) {
       trs_state_load(init_state_file);
       trs_screen_init();
-      trs_screen_refresh();
       }
 #ifdef MACOSX
 	TrsOriginSet();

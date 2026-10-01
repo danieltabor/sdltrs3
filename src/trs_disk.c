@@ -3470,7 +3470,7 @@ real_verify()
 }
 
 void
-real_restore(curdrive)
+real_restore(int curdrive)
 {
 #if __linux
   DiskState *d = &disk[curdrive];

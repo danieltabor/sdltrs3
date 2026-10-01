@@ -49,7 +49,7 @@
 #define SHIFT_F1_IS_F13 1     /* use if X reports Shift+F1..F8 as F13..F20 */
 /*#define SHIFT_F1_IS_F11 1*/ /* use if X reports Shift+F1..F10 as F11..F20 */
 
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 #include "z80.h"
 #include "trs.h"
 #include "trs_sdl_keyboard.h"
@@ -648,16 +648,18 @@ void trs_set_keypad_joystick(void)
 void trs_open_joystick(void)
 {
   static SDL_Joystick *open_joy = NULL;
-  int num_joysticks = SDL_NumJoysticks();
+  int num_joysticks = 0;
+  
+  SDL_GetJoysticks(&num_joysticks);
   
   if (open_joy != NULL) {
-    SDL_JoystickClose(open_joy);
+    SDL_CloseJoystick(open_joy);
     open_joy = NULL;
  }
 
   if ((trs_joystick_num != -1) &&
       (trs_joystick_num <= (num_joysticks -1))) {
-      open_joy = SDL_JoystickOpen(trs_joystick_num);
+      open_joy = SDL_OpenJoystick(trs_joystick_num);
   }
   else
     trs_joystick_num = -1;
@@ -714,21 +716,24 @@ int trs_joystick_in()
   return ~joystate;
 }
 
-void trs_xlate_keysym(int keysym)
+void trs_xlate_keysym(int keysym, int key_down)
 {
-    int key_down;
     KeyTable* kt;
     static int shift_action = TK_Neutral;
-
-    if (keysym == 0x10000) {
+	
+    if( !key_down && !keysym ) {
 	/* force all keys up */
 	queue_key(TK_AllKeysUp);
 	shift_action = TK_Neutral;
 	return;
     }
 
-    key_down = (keysym & 0x10000) == 0;
+   if( keysym == SDLK_HOME ) {
+	   kt =  &ascii_key_table[278];
+   }
+	else {
     kt = &ascii_key_table[keysym & 0xFFFF];
+	}
 
     if (kt->bit_action == TK_NULL) return;
     if (trs_emulate_joystick(key_down, kt->bit_action)) return;
