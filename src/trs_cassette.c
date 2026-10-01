@@ -508,71 +508,57 @@ static void trs_sdl_sound_update(void *userdata, SDL_AudioStream *stream, int ad
 static int
 set_audio_format(int state)
 {
-  SDL_AudioSpec desired, obtained;
-  
-  if( soundDeviceOpen ) {
-    if( stream ) {
-      SDL_DestroyAudioStream(stream);
-      stream = NULL;
-    }
-    SDL_CloseAudioDevice(dev);
-    soundDeviceOpen = FALSE;
-  }
-  
-  desired.freq = cassette_sample_rate;
-  desired.format = SDL_AUDIO_U8;
-  desired.channels = (state == ORCH90) ? 2 : 1;
-  
-  dev = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&desired);
-  if( !dev ) {
-	error("couldn't open cassette sound device");
-	cassette_state = FAILED;
-	return -1;
-  }
-  soundDeviceOpen = TRUE;
-  if( !SDL_GetAudioDeviceFormat(dev, &obtained, NULL) ) {
-      error("could not determined audio format");
-      errno = EINVAL;
-      return -1;
-  }
-  if (obtained.format != SDL_AUDIO_U8 && obtained.format != SDL_AUDIO_S16) {
-      error("requested audio format 0x%x, got 0x%x", 
-	        desired.format, obtained.format);
-      errno = EINVAL;
-      return -1;
-  }
+	SDL_AudioSpec desired;
 
-  if (obtained.channels == 1 && desired.channels == 2) {
-    error("requested stereo, got mono");
-    errno = EINVAL;
-    return -1;
-  }
-  
-  if (abs(obtained.freq - desired.freq) > desired.freq/20) {
-    error("requested sample rate %d Hz, got %d Hz", 
-	       desired.freq, obtained.freq);
-    errno = EINVAL;
-    return -1;
-  }
-  
-  cassette_afmt = obtained.format;
-  cassette_stereo = (obtained.channels == 2);
-  cassette_silence = SDL_GetSilenceValueForFormat(obtained.format);
-  
-  if( !SDL_PauseAudioDevice(dev) ) {
-    error("could not pause audio device");
-    errno = EINVAL;
-    return -1;
-  }
+	if( soundDeviceOpen ) {
+	if( stream ) {
+		SDL_DestroyAudioStream(stream);
+		stream = NULL;
+	}
+		SDL_CloseAudioDevice(dev);
+		soundDeviceOpen = FALSE;
+	}
 
-  stream = SDL_OpenAudioDeviceStream(dev,&obtained,trs_sdl_sound_update,NULL);
-  if( !stream ) {
-    error("couldn't create audio stream");
-    errno = EINVAL;
-    return -1;
-  }
+	desired.freq = cassette_sample_rate;
+	desired.format = SDL_AUDIO_U8;
+	desired.channels = (state == ORCH90) ? 2 : 1;
 
-  return 0;
+	dev = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&desired);
+	if( !dev ) {
+		error("couldn't open cassette sound device");
+		cassette_state = FAILED;
+		return -1;
+	}
+	soundDeviceOpen = TRUE;
+	
+	cassette_afmt = desired.format;
+	cassette_stereo = desired.channels = 2;
+	cassette_silence = SDL_GetSilenceValueForFormat(desired.format);
+	
+	stream = SDL_CreateAudioStream(&desired,NULL);
+	if( !stream ) {
+		error("couldn't create audio stream");
+		errno = EINVAL;
+		return -1;
+	}
+	if( !SDL_SetAudioStreamGetCallback(stream,trs_sdl_sound_update,NULL) ) {
+		error("couldn't set audio stream callback");
+		errno = EINVAL;
+		return -1;
+	}
+	if( !SDL_BindAudioStream(dev,stream) ) {
+		error("couldn't bind audio stream to device");
+		errno = EINVAL;
+		return -1;
+	}
+	
+	if( !SDL_ResumeAudioDevice(dev) ) {
+		error("could not unpause audio device");
+		errno = EINVAL;
+		return -1;
+	}
+	
+	return 0;
 }
 
 void
