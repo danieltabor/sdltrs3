@@ -1,5 +1,7 @@
 # sdltrs3
-Port of sdltrs 1.1.0 to SDL3/emscripten
+TRS-80 Emulator
+
+This is a port of sdltrs 1.1.0 to SDL3/emscripten
 
 The original sdltrs can be found here: https://sdltrs.sourceforge.net/
 
