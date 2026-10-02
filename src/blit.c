@@ -167,27 +167,28 @@ static void XorBlitImageTo3Byte(int width, int height, Uint8 *src,
                         int srcskip, Uint8 *dst, int dstskip,
 						Uint8 *map)
 {
-	int c, o;
+	int c;
+	//int o;
 
 	while ( height-- ) {
-	        Uint8 byte = 0, bit;
-	    	for ( c=0; c<width; ++c ) {
+		Uint8 byte = 0, bit;
+		for ( c=0; c<width; ++c ) {
 			if ( (c&7) == 0 ) {
 				byte = *src++;
 			}
 			bit = (byte&0x80)>>7;
 			if ( bit ) {
-			    o = bit * 4;
-                if ((dst[0] == map[0]) && (dst[1] == map[1]) && (dst[2] == map[2])) {
-                  dst[0] = map[3];
-                  dst[1] = map[4];
-                  dst[2] = map[5];
-                  }
-                else {
-				  dst[0] = map[0];
-				  dst[1] = map[1];
-				  dst[2] = map[2];
-                  }
+				//o = bit * 4;
+				if ((dst[0] == map[0]) && (dst[1] == map[1]) && (dst[2] == map[2])) {
+					dst[0] = map[3];
+					dst[1] = map[4];
+					dst[2] = map[5];
+				}
+				else {
+					dst[0] = map[0];
+					dst[1] = map[1];
+					dst[2] = map[2];
+				}
 			}
 			byte <<= 1;
 			dst += 3;

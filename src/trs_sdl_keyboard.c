@@ -556,7 +556,7 @@ void trs_xlate_keysym(int keysym, int key_down) {
 	}
 	
 	for( kt=ascii_key_table; kt->key != SDLK_UNKNOWN; kt++ ) {
-		if( kt->key == keysym ) {
+		if( kt->key == (SDL_Keycode)keysym ) {
 			break;
 		}
 	}
@@ -649,21 +649,21 @@ static int kb_mem_value(int address)
 int trs_kb_mem_read(int address)
 {
     int key = -1;
-    int i, wait;
-    static int recursion = 0;
-    static int timesseen;
+    //int i, wait;
+    //static int recursion = 0;
+    //static int timesseen;
 
     /* Prevent endless recursive calls to this routine (by mem_read_word
        below) if REG_SP happens to point to keyboard memory. */
-    if (recursion) return 0;
+    //if (recursion) return 0;
 
     /* Avoid delaying key state changes in queue for too long */
     if (key_heartbeat > 2) {
       do {
-	key = trs_next_key(0);
+	key = trs_next_key();
 	if (key >= 0) {
 	  change_keystate(key);
-	  timesseen = 1;
+	  //timesseen = 1;
 	}
       } while (key >= 0);
     }
@@ -687,25 +687,26 @@ int trs_kb_mem_read(int address)
 	   when it first reads from the key matrix.  The search is
 	   needed (at least) for NEWDOS80, which pushes 2 extra bytes
 	   on the stack.  */
-	wait = 0;
-	if (timesseen++ >= 16) {
-	  recursion = 1;
-	  for (i=0; i<=4; i+=2) {
-	    if (mem_read_word(REG_SP + 2 + i) == 0x4015) {
-	      wait = mem_read_word(REG_SP + 10 + i) == 0x004c;
-	      break;
-	    }
-	  }
-	  recursion = 0;
-	}
+	
+	//wait = 0;
+	//if (timesseen++ >= 16) {
+	//  recursion = 1;
+	//  for (i=0; i<=4; i+=2) {
+	//    if (mem_read_word(REG_SP + 2 + i) == 0x4015) {
+	//      wait = mem_read_word(REG_SP + 10 + i) == 0x004c;
+	//      break;
+	//    }
+	//  }
+	//  recursion = 0;
+	//}
 	/* Get the next key */
-	key = trs_next_key(wait);
+	key = trs_next_key();
 	key_stretch_timeout = z80_state.t_count + stretch_amount;
     }
 
     if (key >= 0) {
       change_keystate(key);
-      timesseen = 1;
+      //timesseen = 1;
     }
     key_heartbeat = 0;
     return kb_mem_value(address);
@@ -751,8 +752,6 @@ int dequeue_key()
   return rval;
 }
 
-int trs_next_key(int wait)
-{
-  return dequeue_key();
-
+int trs_next_key() {
+	return dequeue_key();
 }

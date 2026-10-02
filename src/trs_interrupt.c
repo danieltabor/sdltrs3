@@ -133,8 +133,8 @@ long lost_timer_interrupts = 0;
    wrong, but it doesn't really matter). */
 
 void
-trs_cassette_rise_interrupt(int dummy)
-{
+trs_cassette_rise_interrupt(int dummy) {
+  (void)dummy;
   interrupt_latch = (interrupt_latch & ~M3_CASSRISE_BIT) |
     (interrupt_mask & M3_CASSRISE_BIT);
   z80_state.irq = (interrupt_latch & interrupt_mask) != 0;
@@ -142,8 +142,8 @@ trs_cassette_rise_interrupt(int dummy)
 }
 
 void
-trs_cassette_fall_interrupt(int dummy)
-{
+trs_cassette_fall_interrupt(int dummy) {
+  (void)dummy;
   interrupt_latch = (interrupt_latch & ~M3_CASSFALL_BIT) |
     (interrupt_mask & M3_CASSFALL_BIT);
   z80_state.irq = (interrupt_latch & interrupt_mask) != 0;
@@ -243,9 +243,9 @@ trs_disk_motoroff_interrupt(int state)
 }
 
 void
-trs_disk_drq_interrupt(int state)
-{
-  /* no effect */
+trs_disk_drq_interrupt(int state) {
+	(void)state;
+	/* no effect */
 }
 
 void
@@ -571,7 +571,7 @@ void trs_interrupt_save(FILE *file)
   trs_save_uint32(file, &cycles_per_timer, 1);
   trs_save_int(file, &timer_on, 1);
   trs_save_int(file, &saved_delay, 1);
-  if (event_func == (trs_event_func) assert_state)
+  if (event_func == event_func_assert_state)
     event = 1;
   else if (event_func == transition_out)
     event = 2;
@@ -617,7 +617,7 @@ void trs_interrupt_load(FILE *file)
   trs_load_int(file, &event, 1);
   switch(event) {
   case 1:
-    event_func = (trs_event_func) assert_state;
+    event_func = event_func_assert_state;
     break;
   case 2:
     event_func = transition_out;

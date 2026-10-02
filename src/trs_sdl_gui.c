@@ -79,10 +79,10 @@ static int local_trs_model;
 static int local_trs_charset1;
 static int local_trs_charset3;
 static int local_trs_charset4;
-static int local_foreground;
-static int local_background;
-static int local_gui_foreground;
-static int local_gui_background;
+static unsigned int local_foreground;
+static unsigned int local_background;
+static unsigned int local_gui_foreground;
+static unsigned int local_gui_background;
 static int gui_show_led;
 static int gui_resize3;
 static int gui_resize4;
@@ -154,13 +154,12 @@ void trs_gui_write_text_char(char text, int x, int y, int invert)
   trs_gui_write_char(position,text,invert);
 }
 
-void trs_gui_center_text(char *text, int y, int invert)
-{
-  int position = (64-strlen(text))/2 + y * 64;
-  int i;
-  
-  for (i=0;i<strlen(text);i++)
-    trs_gui_write_char(position+i,text[i],invert);
+void trs_gui_center_text(char *text, int y, int invert) {
+	int position = (64-strlen(text))/2 + y * 64;
+	size_t i;
+
+	for( i=0; i<strlen(text); i++)
+		trs_gui_write_char(position+i,text[i],invert);
 }
 
 void trs_gui_frame(int x, int y, int w, int h)
@@ -192,20 +191,20 @@ void trs_gui_clear_rect(int x, int y, int w, int h)
         trs_gui_write_text(clear, x, y+i, 0);
 }
 
-void trs_gui_limit_string(char *orig, char *limited, int limit)
-{
-  int len_first_part;
-  int pos_second_part;
-  
-  if (strlen(orig) > limit) {
-    len_first_part = (limit-3)/2;
-    pos_second_part = strlen(orig) - (limit - len_first_part - 3);
-	strncpy(limited, orig, len_first_part);
-	limited[len_first_part] = '\0';
-	strcat(limited, "...");
-	strcat(limited, orig + pos_second_part);
-  } else
-    strcpy(limited, orig);
+void trs_gui_limit_string(char *orig, char *limited, int limit) {
+	int len_first_part;
+	int pos_second_part;
+
+	if( strlen(orig) > (size_t)limit ) {
+		len_first_part = (limit-3)/2;
+		pos_second_part = strlen(orig) - (limit - len_first_part - 3);
+		strncpy(limited, orig, len_first_part);
+		limited[len_first_part] = '\0';
+		strcat(limited, "...");
+		strcat(limited, orig + pos_second_part);
+	} else {
+		strcpy(limited, orig);
+	}
 }
 
 void trs_expand_dir(char *dir, char *expanded_dir)
@@ -555,7 +554,7 @@ int trs_gui_file_browse(char* path, char* filename, int browse_dir, char* type)
   char current_dir[FILENAME_MAX];
   char limited_dir[80];
   char title[64];
-  int new_dir_len;
+  //int new_dir_len;
   char *new_dir;
   
   strcpy(current_dir, path);
@@ -650,7 +649,7 @@ int trs_gui_file_browse(char* path, char* filename, int browse_dir, char* type)
         case SDLK_RETURN:
           if (*filenamelist[current_first + selection] == '<') {          
             new_dir = filenamelist[current_first + selection];
-            new_dir_len = strlen(&new_dir[1]);
+            //new_dir_len = strlen(&new_dir[1]);
             selection = 0;
             current_first = 0;
           
@@ -882,60 +881,59 @@ int trs_gui_input_string(char *title, char* input, char* output, int file)
 }
 
 int trs_gui_display_popup(char* title, char **entry, 
-                          int entry_count, int selection)
-{
-  int num = 0,invert,key;
-  int done = 0;
-  int max_len = 0;
-  int first_x, first_y;
-  
-  for (num=0;num<entry_count;num++) {
-    if (strlen(entry[num]) > max_len)
-      max_len = strlen(entry[num]);                 
-    }
-  first_x = (64-max_len)/2;
-  first_y = (16-entry_count)/2;
+                          int entry_count, int selection) {
+	int num = 0,invert,key;
+	int done = 0;
+	int max_len = 0;
+	int first_x, first_y;
 
-  trs_gui_frame(first_x-1,first_y-1,max_len+2,entry_count+2);
-  trs_gui_write_text(title, first_x+1, first_y-1, 0);
-  
-  for (num=0;num<entry_count;num++) {
-    invert = (num == selection);                 
-    trs_gui_write_text(entry[num], first_x, first_y+num,invert);
-    }
-  trs_x_flush();
+	for( num=0; num<entry_count; num++ ) {
+		if( strlen(entry[num]) > (size_t)max_len)
+			max_len = strlen(entry[num]);
+	}
+	first_x = (64-max_len)/2;
+	first_y = (16-entry_count)/2;
 
-  do {
-    key = trs_gui_get_key();
-    switch(key) {
-      case SDLK_DOWN:
-        trs_gui_write_text(entry[selection], first_x, selection+first_y,0);
-        if (selection < entry_count-1) 
-          selection ++;
-        else 
-          selection = 0;
-        trs_gui_write_text(entry[selection], first_x, selection+first_y,1);
-        trs_x_flush();
-        break;
-      case SDLK_UP:
-        trs_gui_write_text(entry[selection], first_x, selection+first_y,0);
-        if (selection > 0)
-          selection --;
-        else
-          selection = entry_count-1;
-        trs_gui_write_text(entry[selection], first_x, selection+first_y,1);
-        trs_x_flush();
-        break;
-      case SDLK_RETURN:
-        done = 1;
-        break;
-      case SDLK_ESCAPE:
-        done = 1;
-        break;
-    }
-  } while (!done);
-  
-  return(selection);
+	trs_gui_frame(first_x-1,first_y-1,max_len+2,entry_count+2);
+	trs_gui_write_text(title, first_x+1, first_y-1, 0);
+
+	for (num=0;num<entry_count;num++) {
+		invert = (num == selection);
+		trs_gui_write_text(entry[num], first_x, first_y+num,invert);
+	}
+	trs_x_flush();
+
+	do {
+		key = trs_gui_get_key();
+		switch(key) {
+			case SDLK_DOWN:
+				trs_gui_write_text(entry[selection], first_x, selection+first_y,0);
+				if (selection < entry_count-1) 
+					selection ++;
+				else 
+					selection = 0;
+				trs_gui_write_text(entry[selection], first_x, selection+first_y,1);
+				trs_x_flush();
+				break;
+			case SDLK_UP:
+				trs_gui_write_text(entry[selection], first_x, selection+first_y,0);
+				if (selection > 0)
+					selection --;
+				else
+					selection = entry_count-1;
+				trs_gui_write_text(entry[selection], first_x, selection+first_y,1);
+				trs_x_flush();
+				break;
+			case SDLK_RETURN:
+				done = 1;
+				break;
+			case SDLK_ESCAPE:
+				done = 1;
+				break;
+		}
+	} while (!done);
+
+	return(selection);
 }
 
 int trs_gui_display_menu(char* title, MENU_ENTRY *entry, int selection)
@@ -1945,7 +1943,7 @@ void trs_gui_misc_management(void)
          ret = trs_gui_input_string("Enter Serial Switches in Hex, XX",input,input,0);
          if (!ret) {
            trs_uart_switches = strtol(input,NULL,16);
-           trs_uart_init(0);
+           trs_uart_init();
            }
          break;
        case 6:
@@ -1953,7 +1951,7 @@ void trs_gui_misc_management(void)
          ret = trs_gui_input_string("Enter Serial Port Name",input,input,0);
          if (!ret) {
            strcpy(trs_uart_name,input);
-           trs_uart_init(0);
+           trs_uart_init();
            }
          break;
        case -1:
@@ -2030,7 +2028,8 @@ void trs_gui_model(void)
    {"Microlab Emulation                                          ",MENU_NORMAL_TYPE,3},
    {"",0,-1}};
    int selection = 0;
-   int model_selection = 0, last_model_selection;
+   int model_selection = 0;
+   //int last_model_selection;
    int done = 0;
    int state;
    
@@ -2057,7 +2056,7 @@ void trs_gui_model(void)
          done = 1;
          break;
        case 0:
-         last_model_selection = model_selection;
+         //last_model_selection = model_selection;
          model_selection = trs_gui_display_popup("Model",model_choices,4,
                                             model_selection);
          switch(model_selection) {

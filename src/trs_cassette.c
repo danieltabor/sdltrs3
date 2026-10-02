@@ -231,7 +231,7 @@ Uchar value_to_sample[] = { 127, /* 0.46 V */
 #define WAVE_DATAID_OFFSET 0x24
 #define WAVE_DATASIZE_OFFSET 0x28
 #define WAVE_DATA_OFFSET 0x2c
-static long wave_dataid_offset = WAVE_DATAID_OFFSET;
+//static long wave_dataid_offset = WAVE_DATAID_OFFSET;
 static long wave_datasize_offset = WAVE_DATASIZE_OFFSET;
 static long wave_data_offset = WAVE_DATA_OFFSET;
 
@@ -352,9 +352,9 @@ put_sample(Uchar sample, int convert, FILE* f)
 /* Get an 8-byte unsigned sample, if necessary converting from a
  * different sample format and/or reducing stereo to mono.  */
 static int
-get_sample(int convert, FILE* f)
-{
-  return getc(f);
+get_sample(int convert, FILE* f) {
+	(void)convert;
+	return getc(f);
 }
 
 /* Write a new .wav file header to a file.  Return -1 on error. */
@@ -368,7 +368,7 @@ create_wav_header(FILE *f)
      The data chunk is the actual sample data, so its size is the size
      of the file minus wave_data_offset. */
 
-  wave_dataid_offset = WAVE_DATAID_OFFSET;
+  //wave_dataid_offset = WAVE_DATAID_OFFSET;
   wave_datasize_offset = WAVE_DATASIZE_OFFSET;
   wave_data_offset = WAVE_DATA_OFFSET;
 
@@ -447,7 +447,7 @@ parse_wav_header(FILE *f)
   }
   fmt_size -= 16;  /* size read so far */
   while (fmt_size-- > 0) getc(f); /* ignore additional */
-  wave_dataid_offset = ftell(f);
+  //wave_dataid_offset = ftell(f);
   if (check_chunk_id("data", f) < 0) return -1;
   wave_datasize_offset = ftell(f);
   if (get_fourbyte(&n4, f) < 0) return -1; /* ignore this field */
@@ -459,6 +459,7 @@ parse_wav_header(FILE *f)
 }  
 
 static void trs_sdl_sound_update(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
+  (void)userdata;
   int i;
   if (sound_ring_count == 0) {
 	for( i=0; i<total_amount; i++ ) {
@@ -468,11 +469,11 @@ static void trs_sdl_sound_update(void *userdata, SDL_AudioStream *stream, int ad
 	int len;
 	int num_to_read;
 	
-	if (sound_ring_count > total_amount) {
+	if (sound_ring_count > (Uint32)total_amount) {
        len = total_amount;
        num_to_read = len;
     }
-    else if (sound_ring_count > additional_amount) {
+    else if (sound_ring_count > (Uint32)additional_amount) {
        len = additional_amount;
        num_to_read = len;
 	}
@@ -628,8 +629,7 @@ void trs_set_cassette_position(int pos)
 }
 
 /* Return value: 1 = already that state; 0 = state changed; -1 = failed */
-int assert_state(int state)
-{
+int assert_state(int state) {
   if (cassette_state == state) {
     return 1;
   }
@@ -739,6 +739,9 @@ int assert_state(int state)
   return 0;
 }
 
+void event_func_assert_state(int state) {
+	(void)assert_state(state);
+}
 
 /* Record an output transition.
    value is either the new port value or FLUSH.
@@ -794,11 +797,11 @@ transition_out(int value)
         cassette_roundoff_error = 0.0;
       }
       if (trs_event_scheduled() == transition_out ||
-		  trs_event_scheduled() == (trs_event_func) assert_state) {
+		  trs_event_scheduled() == event_func_assert_state) {
         trs_cancel_event();
       }
       if (value == FLUSH) {
-        trs_schedule_event((trs_event_func)assert_state, CLOSE, 5000000);
+        trs_schedule_event(event_func_assert_state, CLOSE, 5000000);
       } else {
         trs_schedule_event(transition_out, FLUSH,
                            (int)(25000 * z80_state.clockMHz));
@@ -923,7 +926,7 @@ transition_out(int value)
 
   default:
     error("output format %s not implemented",
-	  cassette_format < (sizeof(format_name)/sizeof(char *)) ?
+	  (size_t)cassette_format < (sizeof(format_name)/sizeof(char *)) ?
 	  format_name[cassette_format] : "out of range;");
     break;
   }
@@ -1082,7 +1085,7 @@ transition_in()
 
   default:
     error("input format %s not implemented",
-	  cassette_format < (sizeof(format_name)/sizeof(char *)) ?
+	  (size_t)cassette_format < (sizeof(format_name)/sizeof(char *)) ?
 	  format_name[cassette_format] : "out of range;");
     break;
   }
@@ -1098,8 +1101,8 @@ transition_in()
    bps rise or fall interrupts enabled, then give it one of each just
    to get things going. */
 void
-trs_cassette_kickoff(int dummy)
-{
+trs_cassette_kickoff(int dummy) {
+  (void)dummy;
   if (cassette_motor && cassette_state == CLOSE &&
       trs_cassette_interrupts_enabled()) {
     cassette_speed = SPEED_1500;
@@ -1193,8 +1196,8 @@ trs_sound_out(int value)
 }
 
 void
-orch90_flush(int dummy)
-{
+orch90_flush(int dummy) {
+  (void)dummy;
   trs_orch90_out(0, FLUSH);
 }
 
@@ -1245,11 +1248,11 @@ trs_orch90_out(int channels, int value)
   }
 
   if (trs_event_scheduled() == orch90_flush ||
-      trs_event_scheduled() == (trs_event_func) assert_state) {
+      trs_event_scheduled() == event_func_assert_state) {
     trs_cancel_event();
   }
   if (value == FLUSH) {
-    trs_schedule_event((trs_event_func)assert_state, CLOSE, 5000000);
+    trs_schedule_event(event_func_assert_state, CLOSE, 5000000);
   } else {
     trs_schedule_event(orch90_flush, FLUSH,
 		       (int)(250000 * z80_state.clockMHz));
@@ -1262,8 +1265,8 @@ trs_orch90_out(int channels, int value)
 }
 
 void
-trs_cassette_update(int dummy)
-{
+trs_cassette_update(int dummy) {
+  (void)dummy;
   if (cassette_motor && cassette_state != WRITE && assert_state(READ) >= 0) {
     int newtrans = 0;
     while ((z80_state.t_count - cassette_transition) >= cassette_delta) {

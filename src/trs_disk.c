@@ -1029,7 +1029,7 @@ dmk_get_track(DiskState* d)
 {
   int res;
   if (d->phytrack == d->u.dmk.curtrack &&
-      state.curside == d->u.dmk.curside) return;
+      state.curside == (unsigned int)d->u.dmk.curside) return;
   d->u.dmk.curtrack = d->phytrack;
   d->u.dmk.curside = state.curside;
   if (d->u.dmk.curtrack >= d->u.dmk.ntracks ||
@@ -1076,7 +1076,7 @@ search(int sector, int side)
     SectorId *sid;
     if (d->phytrack < 0 || d->phytrack >= MAXTRACKS ||
 	state.curside >= JV3_SIDES ||
-	(side != -1 && side != state.curside) ||
+	(side != -1 && (unsigned int)side != state.curside) ||
 	d->phytrack != state.track || d->file == NULL) {
       state.status |= TRSDISK_NOTFOUND;
       return -1;
@@ -1948,7 +1948,7 @@ trs_disk_data_write(unsigned char data)
       break;
     case FMT_TRACKID:
       if (d->emutype == REAL) {
-	if (d->u.real.fmt_nbytes >= sizeof(d->u.real.buf)) {
+	if ((size_t)d->u.real.fmt_nbytes >= sizeof(d->u.real.buf)) {
 	  /* Data structure full */
 	  state.status |= TRSDISK_WRITEFLT;
 	  state.bytecount = 0;
@@ -2906,7 +2906,7 @@ trs_disk_command_write(unsigned char cmd)
 	denok = 0;
 	for (;;) {
 	  SectorId *sid = &d->u.jv3.id[d->u.jv3.sorted_id[i]];
-	  int dden = (sid->flags & JV3_DENSITY) != 0;
+	  unsigned int dden = (sid->flags & JV3_DENSITY) != 0;
 	  if (sid->track != d->phytrack ||
 	      (sid->flags & JV3_SIDE ? 1 : 0) != state.curside) break;
 	  totbyt += (dden ? 1 : 2) *
@@ -2964,8 +2964,8 @@ trs_disk_command_write(unsigned char cmd)
       float a = angle();
       int ia = a * (d->inches ? TRKSIZE_DD : TRKSIZE_8DD);
       int ib = 0;
-      int i, j, idamp, dden, prev_idamp, prev_dden, ts;
-
+      int i, j, idamp, prev_idamp, prev_dden, ts;
+      unsigned int dden;
       dmk_get_track(d);
 
       for (j = 0; j < 2; j++) {
@@ -3398,16 +3398,16 @@ real_rate(DiskState *d)
 }
 
 void
-real_error(DiskState *d, unsigned int flags, char *msg)
-{
-  time_t now = time(NULL);
-  if (now > d->u.real.empty_timeout) {
-    d->u.real.empty_timeout = time(NULL) + EMPTY_TIMEOUT;
-    d->u.real.empty = 1;
-  }
-  if (trs_disk_debug_flags & DISKDEBUG_REALERR) {
-    debug("error on real_%s\n", msg);
-  }
+real_error(DiskState *d, unsigned int flags, char *msg) {
+	(void)flags;
+	time_t now = time(NULL);
+	if (now > d->u.real.empty_timeout) {
+		d->u.real.empty_timeout = time(NULL) + EMPTY_TIMEOUT;
+		d->u.real.empty = 1;
+	}
+	if (trs_disk_debug_flags & DISKDEBUG_REALERR) {
+		debug("error on real_%s\n", msg);
+	}
 }
 
 void
@@ -3494,6 +3494,7 @@ real_restore(int curdrive)
     return;
   }
 #else
+  (void)curdrive;
   trs_disk_unimpl(state.currcommand, "restore real floppy");
 #endif
 }

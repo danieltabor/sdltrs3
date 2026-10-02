@@ -309,8 +309,8 @@ void trs_hard_out(int port, int value)
   }
 }
 
-static void hard_restore(int cmd)
-{
+static void hard_restore(int cmd) {
+  (void)cmd;
 #if HARDDEBUG2
   debug("hard_restore drive %d\n", state.drive);
 #endif
@@ -349,31 +349,31 @@ static void hard_write(int cmd)
   find_sector(TRS_HARD_READY | TRS_HARD_SEEKDONE | TRS_HARD_DRQ);
 }
 
-static void hard_verify(int cmd)
-{
+static void hard_verify(int cmd) {
+	(void)cmd;
 #if HARDDEBUG2
-  debug("hard_verify drive %d cyl %d hd %d sec %d\n",
-	state.drive, state.cyl, state.head, state.secnum);
+	debug("hard_verify drive %d cyl %d hd %d sec %d\n",
+	      state.drive, state.cyl, state.head, state.secnum);
 #endif
-  find_sector(TRS_HARD_READY | TRS_HARD_SEEKDONE);
+	find_sector(TRS_HARD_READY | TRS_HARD_SEEKDONE);
 }
 
-static void hard_format(int cmd)
-{
+static void hard_format(int cmd) {
+	(void)cmd;
 #if HARDDEBUG2
-  debug("hard_format drive %d cyl %d hd %d\n",
+	debug("hard_format drive %d cyl %d hd %d\n",
 	state.drive, state.cyl, state.head);
 #endif
-  if (state.seccnt != TRS_HARD_SEC_PER_TRK) {
-    error("trs_hard: can only do %d sectors/track, not %d",
-	  TRS_HARD_SEC_PER_TRK, state.seccnt);
-  }
-  if (state.secnum != TRS_HARD_SECSIZE_CODE) {
-    error("trs_hard: can only do %d bytes/sectors (code %d), not code %d",
-	  TRS_HARD_SECSIZE, TRS_HARD_SECSIZE_CODE, state.secnum);
-  }
-  /* !!should probably set up to read skew table here */
-  state.status = TRS_HARD_READY | TRS_HARD_SEEKDONE;
+	if (state.seccnt != TRS_HARD_SEC_PER_TRK) {
+		error("trs_hard: can only do %d sectors/track, not %d",
+		TRS_HARD_SEC_PER_TRK, state.seccnt);
+	}
+	if (state.secnum != TRS_HARD_SECSIZE_CODE) {
+		error("trs_hard: can only do %d bytes/sectors (code %d), not code %d",
+		TRS_HARD_SECSIZE, TRS_HARD_SECSIZE_CODE, state.secnum);
+	}
+	/* !!should probably set up to read skew table here */
+	state.status = TRS_HARD_READY | TRS_HARD_SEEKDONE;
 }
 
 static void hard_init(int cmd)
@@ -387,13 +387,13 @@ static void hard_init(int cmd)
   state.status = TRS_HARD_READY | TRS_HARD_SEEKDONE;
 }
 
-static void hard_seek(int cmd)
-{
+static void hard_seek(int cmd) {
+	(void)cmd;
 #if HARDDEBUG2
-  debug("hard_seek drive %d cyl %d hd %d sec %d\n",
-	state.drive, state.cyl, state.head, state.secnum);
+	debug("hard_seek drive %d cyl %d hd %d sec %d\n",
+	      state.drive, state.cyl, state.head, state.secnum);
 #endif
-  find_sector(TRS_HARD_READY | TRS_HARD_SEEKDONE);
+	find_sector(TRS_HARD_READY | TRS_HARD_SEEKDONE);
 }
 
 /* 

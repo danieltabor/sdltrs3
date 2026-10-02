@@ -3,13 +3,11 @@
 CC   = emcc
 OBJ  = blit.o debug.o dis.o error.o load_cmd.o load_hex.o main.o trs_mkdisk.o trs_cassette.o trs_chars.o trs_disk.o trs_hard.o trs_imp_exp.o trs_interrupt.o trs_io.o trs_memory.o trs_printer.o trs_rom1.o trs_rom3.o trs_rom4p.o trs_sdl_gui.o trs_sdl_interface.o trs_sdl_keyboard.o trs_state_save.o trs_uart.o z80.o sdltrs_main.o PasteManager.o
 LINKOBJ  = blit.o debug.o dis.o error.o load_cmd.o load_hex.o main.o trs_mkdisk.o trs_cassette.o trs_chars.o trs_disk.o trs_hard.o trs_imp_exp.o trs_interrupt.o trs_io.o trs_memory.o trs_printer.o trs_rom1.o trs_rom3.o trs_rom4p.o trs_sdl_gui.o trs_sdl_interface.o trs_sdl_keyboard.o trs_state_save.o  trs_uart.o z80.o sdltrs_main.o PasteManager.o
-LIBS =  -lSDL3 -sUSE_SDL=3 -sSTACK_SIZE=1048576 -sALLOW_MEMORY_GROWTH -sASYNCIFY=1 -s"ASYNCIFY_ONLY=['z80_run','trs_timer_sync_with_host','trs_get_event']"  --preload-file data 
-# extra debug flags --emit-symbol-map --profiling-funcs
+LIBS =  -lSDL3 -sUSE_SDL=3 -sSTACK_SIZE=1048576 -sALLOW_MEMORY_GROWTH -sASYNCIFY=1  --preload-file data 
+#-g -sASSERTIONS=1 --profiling-funcs --emit-symbol-map
 INCS =  
 BIN  = sdltrs
-CFLAGS = $(INCS) -DSDL_MAIN_HANDLED -O2 -sUSE_SDL=3 
-#extra debug flags -gsource-map
-ARGFLAG := $(shell ./parse_cmdline.py)
+CFLAGS = -Wextra $(INCS) -DSDL_MAIN_HANDLED -O2 -sUSE_SDL=3
 .PHONY: all all-before all-after clean clean-custom
 
 all: all-before sdltrs all-after

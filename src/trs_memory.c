@@ -234,9 +234,9 @@ void hex_data(int address, int value)
 }
 
 /* Called by load_hex */
-void hex_transfer_address(int address)
-{
-    /* Ignore */
+void hex_transfer_address(int address) {
+	(void)address;
+	/* Ignore */
 }
 
 int mem_read(int address)

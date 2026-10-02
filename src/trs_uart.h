@@ -42,7 +42,7 @@
 #include "trs.h"
 #include "trs_hard.h"
 
-extern void trs_uart_init(int reset_button);
+extern void trs_uart_init();
 extern int trs_uart_check_avail();
 extern int trs_uart_modem_in();
 extern void trs_uart_reset_out(int value);

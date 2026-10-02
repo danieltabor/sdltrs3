@@ -153,7 +153,6 @@ static void mainloop(void) {
 
 int SDLmain(int argc, char *argv[])
 {
-    int debug = FALSE;
     struct stat st;
 
     /* program_name must be set first because the error
@@ -184,7 +183,7 @@ int SDLmain(int argc, char *argv[])
   	    exit(1);
     }
 	
-    argc = trs_parse_command_line(argc, argv, &debug);
+    argc = trs_parse_command_line(argc, argv);
 	if (argc > 1) {
       fprintf(stderr, "%s: erroneous argument %s\n", program_name, argv[1]);
       exit(1);
@@ -231,10 +230,8 @@ int SDLmain(int argc, char *argv[])
 //#ifdef __EMSCRIPTEN__
 //		emscripten_set_main_loop(mainloop,1,1);
 //#else
-    if (!debug || fullscreen) {
       /* Run continuously until exit or request to enter debugger */
-      z80_run(TRUE);
-    }
+	z80_run(TRUE);
 //#endif
     printf("Entering debugger.\n");
     debug_init();

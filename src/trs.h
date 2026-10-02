@@ -98,7 +98,7 @@ extern int trs_continuous; /* 1= run continuously,
 extern int trs_disk_debug_flags;
 extern int trs_emtsafe;
 
-extern int trs_parse_command_line(int argc, char **argv, int *debug);
+extern int trs_parse_command_line(int argc, char **argv);
 extern int trs_write_config_file(char *filename);
 extern int trs_load_config_file(char *alternate_file);
 
@@ -126,7 +126,7 @@ extern void trs_exit(void);
 extern void trs_kb_reset(void);
 extern void trs_kb_bracket(int shifted);
 extern int trs_kb_mem_read(int address);
-extern int trs_next_key(int wait);
+extern int trs_next_key(void);
 extern void trs_kb_heartbeat(void);
 extern void trs_xlate_keysym(int keysym, int key_down);
 extern void queue_key(int key);
@@ -205,6 +205,7 @@ extern int cassette_default_sample_rate;
 extern void trs_orch90_out(int chan, int value);
 extern void trs_cassette_reset(void);
 extern int assert_state(int dummy);
+extern void event_func_assert_state(int dummy);
 extern void transition_out(int dummy);
 extern void trs_cassette_kickoff(int dummy);
 extern void orch90_flush(int dummy);

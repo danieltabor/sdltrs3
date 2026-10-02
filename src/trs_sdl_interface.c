@@ -617,232 +617,268 @@ void trs_set_to_defaults(void)
   trs_emtsafe = 0;
 }
 
-static void trs_opt_scale(char *arg, int intarg, char *stringarg)
-{
-  scale_x = atoi(arg);
-  if (scale_x <= 0) scale_x = 1;
-  if (scale_x > MAX_SCALE) scale_x = MAX_SCALE;
-  scale_y = scale_x * 2;
+static void trs_opt_scale(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	scale_x = atoi(arg);
+	if (scale_x <= 0) scale_x = 1;
+	if (scale_x > MAX_SCALE) scale_x = MAX_SCALE;
+	scale_y = scale_x * 2;
 }
-static void trs_opt_scale2(char *arg, int intarg, char *stringarg)
-{
-  scale_x = intarg;
-  scale_y = scale_x * 2;
+static void trs_opt_scale2(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	scale_x = intarg;
+	scale_y = scale_x * 2;
 }
-static void trs_opt_resize3(char *arg, int intarg, char *stringarg)
-{
-  resize3 = intarg;
+static void trs_opt_resize3(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	resize3 = intarg;
 }
-static void trs_opt_resize4(char *arg, int intarg, char *stringarg)
-{
-  resize4 = intarg;
+static void trs_opt_resize4(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	resize4 = intarg;
 }
-static void trs_opt_fullscreen(char *arg, int intarg, char *stringarg)
-{
-  fullscreen = intarg;
+static void trs_opt_fullscreen(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	fullscreen = intarg;
 }
-static void trs_opt_model(char *arg, int intarg, char *stringarg)
-{
-  if (strcmp(arg, "1") == 0 ||
-      strcasecmp(arg, "I") == 0) {
-    trs_model = 1;
-  } else if (strcmp(arg, "3") == 0 ||
-             strcasecmp(arg, "III") == 0) {
-    trs_model = 3;
-  } else if (strcmp(arg, "4") == 0 ||
-             strcasecmp(arg, "IV") == 0) {
-    trs_model = 4;
-  } else if (strcasecmp(arg, "4P") == 0 ||
-             strcasecmp(arg, "IVp") == 0) {
-    trs_model = 5;
-  } else 
-    trs_model = 1;
+static void trs_opt_model(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	if (strcmp(arg, "1") == 0 ||
+		strcasecmp(arg, "I") == 0) {
+		trs_model = 1;
+	} else if (strcmp(arg, "3") == 0 ||
+		strcasecmp(arg, "III") == 0) {
+		trs_model = 3;
+	} else if (strcmp(arg, "4") == 0 ||
+		strcasecmp(arg, "IV") == 0) {
+		trs_model = 4;
+	} else if (strcasecmp(arg, "4P") == 0 ||
+		strcasecmp(arg, "IVp") == 0) {
+		trs_model = 5;
+	} else {
+		trs_model = 1;
+	}
 }
-static void trs_opt_model2(char *arg, int intarg, char *stringarg)
-{
+static void trs_opt_model2(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
 	trs_model = intarg;
 }
-static void trs_opt_charset1(char *arg, int intarg, char *stringarg)
-{
-  if (isdigit(*arg)) {
-    trs_charset1 = atoi(arg);
-    if (trs_charset1 < 0 || (trs_charset1 > 3  && trs_charset != 10))
-      trs_charset1 = 3;
-  } else if (arg[0] == 'e'/*early*/) {
-     trs_charset1 = 0;
-  } else if (arg[0] == 's'/*stock*/) {
-     trs_charset1 = 1;
-  } else if (arg[0] == 'l'/*lcmod*/) {
-     trs_charset1 = 2;
-  } else if (arg[0] == 'w'/*wider*/) {
-     trs_charset1 = 3;
-  } else if (arg[0] == 'g'/*genie or german*/) {
-     trs_charset1 = 10;
-  } else {
-     trs_charset1 = 3;
-  }
+static void trs_opt_charset1(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	if (isdigit(*arg)) {
+		trs_charset1 = atoi(arg);
+		if (trs_charset1 < 0 || (trs_charset1 > 3  && trs_charset != 10)) {
+			trs_charset1 = 3;
+		}
+	} else if (arg[0] == 'e'/*early*/) {
+		trs_charset1 = 0;
+	} else if (arg[0] == 's'/*stock*/) {
+		trs_charset1 = 1;
+	} else if (arg[0] == 'l'/*lcmod*/) {
+		trs_charset1 = 2;
+	} else if (arg[0] == 'w'/*wider*/) {
+		trs_charset1 = 3;
+	} else if (arg[0] == 'g'/*genie or german*/) {
+		trs_charset1 = 10;
+	} else {
+		trs_charset1 = 3;
+	}
 }
-static void trs_opt_charset3(char *arg, int intarg, char *stringarg)
-{
-  if (isdigit(*arg)) {
-    trs_charset3 = atoi(arg);
-    if (trs_charset3 < 4 || trs_charset3 > 6)
-      trs_charset3 = 4;
-  } else if (arg[0] == 'k'/*katakana*/) {
-    trs_charset3 = 4;
-  } else if (arg[0] == 'i'/*international*/) {
-    trs_charset3 = 5;
-  } else if (arg[0] == 'b'/*bold*/) {
-    trs_charset3 = 6;
-  } else {
-    trs_charset3 = 5;
-  }
+static void trs_opt_charset3(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	if (isdigit(*arg)) {
+		trs_charset3 = atoi(arg);
+		if (trs_charset3 < 4 || trs_charset3 > 6) {
+			trs_charset3 = 4;
+		}
+	} else if (arg[0] == 'k'/*katakana*/) {
+		trs_charset3 = 4;
+	} else if (arg[0] == 'i'/*international*/) {
+		trs_charset3 = 5;
+	} else if (arg[0] == 'b'/*bold*/) {
+		trs_charset3 = 6;
+	} else {
+		trs_charset3 = 5;
+	}
 }
-static void trs_opt_charset4(char *arg, int intarg, char *stringarg)
-{
-  if (isdigit(*arg)) {
-    trs_charset4 = atoi(arg);
-    if (trs_charset4 < 7 || trs_charset4 > 9)
-      trs_charset4 = 8;
-  } else if (arg[0] == 'k'/*katakana*/) {
-    trs_charset4 = 7;
-  } else if (arg[0] == 'i'/*international*/) {
-    trs_charset4 = 8;
-  } else if (arg[0] == 'b'/*bold*/) {
-    trs_charset4 = 9;
-  } else {
-    trs_charset4 = 8;
-  }
+static void trs_opt_charset4(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	if (isdigit(*arg)) {
+		trs_charset4 = atoi(arg);
+		if (trs_charset4 < 7 || trs_charset4 > 9) {
+			trs_charset4 = 8;
+		}
+	} else if (arg[0] == 'k'/*katakana*/) {
+		trs_charset4 = 7;
+	} else if (arg[0] == 'i'/*international*/) {
+		trs_charset4 = 8;
+	} else if (arg[0] == 'b'/*bold*/) {
+		trs_charset4 = 9;
+	} else {
+		trs_charset4 = 8;
+	}
 }
-static void trs_opt_string(char *arg, int intarg, char *stringarg)
-{
+static void trs_opt_string(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
 	strcpy(stringarg, arg);
 }
-static void trs_opt_disk(char *arg, int intarg, char *stringarg)
-{
+static void trs_opt_disk(char *arg, int intarg, char *stringarg) {
+	(void)stringarg;
 	trs_disk_insert(intarg, arg);
 }
-static void trs_opt_hard(char *arg, int intarg, char *stringarg)
-{
+static void trs_opt_hard(char *arg, int intarg, char *stringarg) {
+	(void)stringarg;
 	trs_hard_attach(intarg, arg);
 }
-static void trs_opt_cass(char *arg, int intarg, char *stringarg)
-{
+static void trs_opt_cass(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
 	trs_cassette_insert(arg);
 }
-static void trs_opt_keystretch(char *arg, int intarg, char *stringarg)
-{
-  stretch_amount = strtol(arg, NULL, 0);
+static void trs_opt_keystretch(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	stretch_amount = strtol(arg, NULL, 0);
 }
-static void trs_opt_borderwidth(char *arg, int intarg, char *stringarg)
-{
-  window_border_width = strtol(arg, NULL, 0);
+static void trs_opt_borderwidth(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	window_border_width = strtol(arg, NULL, 0);
 }
-static void trs_opt_microlabs(char *arg, int intarg, char *stringarg)
-{
-  grafyx_set_microlabs(intarg);
+static void trs_opt_microlabs(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	grafyx_set_microlabs(intarg);
 }
-static void trs_opt_led(char *arg, int intarg, char *stringarg)
-{
-  trs_show_led = intarg;
+static void trs_opt_led(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	trs_show_led = intarg;
 }
-static void trs_opt_doubler(char *arg, int intarg, char *stringarg)
-{
-  switch (*arg) {
-    case 'p':
-    case 'P':
-      trs_disk_doubler = TRSDISK_PERCOM;
-      break;
-    case 'r':
-    case 'R':
-    case 't':
-    case 'T':
-      trs_disk_doubler = TRSDISK_TANDY;
-      break;
-    case 'b':
-    case 'B':
-    default:
-      trs_disk_doubler = TRSDISK_BOTH;
-      break;
-    case 'n':
-    case 'N':
-      trs_disk_doubler = TRSDISK_NODOUBLER;
-      break;
-    }
+static void trs_opt_doubler(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	switch (*arg) {
+		case 'p':
+		case 'P':
+			trs_disk_doubler = TRSDISK_PERCOM;
+			break;
+		case 'r':
+		case 'R':
+		case 't':
+		case 'T':
+			trs_disk_doubler = TRSDISK_TANDY;
+			break;
+		case 'b':
+		case 'B':
+		default:
+			trs_disk_doubler = TRSDISK_BOTH;
+			break;
+		case 'n':
+		case 'N':
+			trs_disk_doubler = TRSDISK_NODOUBLER;
+		break;
+	}
 }
-static void trs_opt_sizemap(char *arg, int intarg, char *stringarg)
-{
-  sscanf(arg, "%d,%d,%d,%d,%d,%d,%d,%d",
-         &disksizes[0], &disksizes[1], &disksizes[2], &disksizes[3],
-         &disksizes[4], &disksizes[5], &disksizes[6], &disksizes[7]);
-#ifdef MACOSX		 
-  disksizesLoaded = TRUE;
-#endif  
+static void trs_opt_sizemap(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	sscanf(arg, "%d,%d,%d,%d,%d,%d,%d,%d",
+	       &disksizes[0], &disksizes[1], &disksizes[2], &disksizes[3],
+	       &disksizes[4], &disksizes[5], &disksizes[6], &disksizes[7]);
+#ifdef MACOSX
+	disksizesLoaded = TRUE;
+#endif
 }
 #ifdef __linux
-static void trs_opt_stepmap(char *arg, int intarg, char *stringarg)
-{
-  sscanf(arg, "%d,%d,%d,%d,%d,%d,%d,%d",
-         &disksteps[0], &disksteps[1], &disksteps[2], &disksteps[3],
-         &disksteps[4], &disksteps[5], &disksteps[6], &disksteps[7]);
+static void trs_opt_stepmap(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	sscanf(arg, "%d,%d,%d,%d,%d,%d,%d,%d",
+	       &disksteps[0], &disksteps[1], &disksteps[2], &disksteps[3],
+	       &disksteps[4], &disksteps[5], &disksteps[6], &disksteps[7]);
 }
 #endif
-static void trs_opt_truedam(char *arg, int intarg, char *stringarg)
-{
-  trs_disk_truedam = intarg;
+static void trs_opt_truedam(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	trs_disk_truedam = intarg;
 }
-static void trs_opt_samplerate(char *arg, int intarg, char *stringarg)
-{
-  cassette_default_sample_rate = strtol(arg, NULL, 0);
+static void trs_opt_samplerate(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	cassette_default_sample_rate = strtol(arg, NULL, 0);
 }
-static void trs_opt_switches(char *arg, int intarg, char *stringarg)
-{
-  trs_uart_switches = strtol(arg, NULL, 0);
+static void trs_opt_switches(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	trs_uart_switches = strtol(arg, NULL, 0);
 }
-static void trs_opt_shiftbracket(char *arg, int intarg, char *stringarg)
-{
-  trs_kb_bracket(intarg);
+static void trs_opt_shiftbracket(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	trs_kb_bracket(intarg);
 }
-static void trs_opt_keypadjoy(char *arg, int intarg, char *stringarg)
-{
-  trs_keypad_joystick = intarg;
+static void trs_opt_keypadjoy(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	trs_keypad_joystick = intarg;
 }
-static void trs_opt_joysticknum(char *arg, int intarg, char *stringarg)
-{
-  if (strcasecmp(arg,"none") == 0)
-    trs_joystick_num = -1;
-  else
-    trs_joystick_num = atoi(arg);
+static void trs_opt_joysticknum(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	if (strcasecmp(arg,"none") == 0)
+		trs_joystick_num = -1;
+	else
+		trs_joystick_num = atoi(arg);
 }
-static void trs_opt_foreground(char *arg, int intarg, char *stringarg)
-{
-  foreground = strtol(arg, NULL, 16);
+static void trs_opt_foreground(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	foreground = strtol(arg, NULL, 16);
 }
-static void trs_opt_background(char *arg, int intarg, char *stringarg)
-{
-  background = strtol(arg, NULL, 16);
+static void trs_opt_background(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	background = strtol(arg, NULL, 16);
 }
-static void trs_opt_guiforeground(char *arg, int intarg, char *stringarg)
-{
-  gui_foreground = strtol(arg, NULL, 16);
+static void trs_opt_guiforeground(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	gui_foreground = strtol(arg, NULL, 16);
 }
-static void trs_opt_guibackground(char *arg, int intarg, char *stringarg)
-{
-  gui_background = strtol(arg, NULL, 16);
+static void trs_opt_guibackground(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	gui_background = strtol(arg, NULL, 16);
 }
-static void trs_opt_emtsafe(char *arg, int intarg, char *stringarg)
-{
-  trs_emtsafe = intarg;
+static void trs_opt_emtsafe(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	trs_emtsafe = intarg;
 }
-static void trs_opt_turbo(char *arg, int intarg, char *stringarg)
-{
-  timer_overclock = intarg;
+static void trs_opt_turbo(char *arg, int intarg, char *stringarg) {
+	(void)arg;
+	(void)stringarg;
+	timer_overclock = intarg;
 }
-static void trs_opt_turborate(char *arg, int intarg, char *stringarg)
-{
-  timer_overclock_rate = atoi(arg);
-  if (timer_overclock_rate <= 0)
-	  timer_overclock_rate = 1;
+static void trs_opt_turborate(char *arg, int intarg, char *stringarg) {
+	(void)intarg;
+	(void)stringarg;
+	timer_overclock_rate = atoi(arg);
+	if (timer_overclock_rate <= 0) {
+		timer_overclock_rate = 1;
+	}
 }
 
 int trs_load_config_file(char *alternate_file)
@@ -906,8 +942,7 @@ int trs_load_config_file(char *alternate_file)
   return 1;
 }
 
-int trs_parse_command_line(int argc, char **argv, int *debug)
-{
+int trs_parse_command_line(int argc, char **argv) {
   int i,j;
   char alt_config_file[FILENAME_MAX];
 
@@ -948,7 +983,7 @@ int trs_parse_command_line(int argc, char **argv, int *debug)
 
   for (i = 1; i < argc; i++) {
 	int argAvail = ((i + 1) < argc);		/* is argument available? */
-	int argMissing = FALSE;
+	//int argMissing = FALSE;
 
 	for (j=0;j<num_options;j++) {
       if (argv[i][0] == '-') {
@@ -957,7 +992,7 @@ int trs_parse_command_line(int argc, char **argv, int *debug)
 		    if (argAvail) {
 		      (*options[j].handler)(argv[++i],options[j].intArg,options[j].strArg);  
 		    } else {
-			  argMissing = TRUE;
+			  //argMissing = TRUE;
   		    }
 	  	  } else
 		      (*options[j].handler)(NULL,options[j].intArg,options[j].strArg); 
@@ -2151,20 +2186,21 @@ void trs_screen_80x24(int flag)
   text80x24 = flag;
 }
 
-void screen_init()
-{
-  int i;
+void screen_init() {
+	size_t i;
 
-  /* initially, screen is blank (i.e. full of spaces) */
-  for (i = 0; i < sizeof(trs_screen); i++)
-    trs_screen[i] = ' ';
+	/* initially, screen is blank (i.e. full of spaces) */
+	for( i = 0; i < sizeof(trs_screen); i++ ) {
+		trs_screen[i] = ' ';
+	}
 }
 
 void
 boxes_init(int foreground, int background, int width, int height, int expanded)
 {
   SDL_Rect fullrect;
-  int graphics_char, bit, p;
+  int graphics_char;
+  int bit;
   SDL_Rect bits[6];
 
   /*
@@ -2195,7 +2231,7 @@ boxes_init(int foreground, int background, int width, int height, int expanded)
     /* Clear everything */
     SDL_FillSurfaceRect(trs_box[expanded][graphics_char], &fullrect, background);
     
-    for (bit = 0, p = 0; bit < 6; ++bit) {
+    for (bit = 0; bit < 6; ++bit) {
       if (graphics_char & (1 << bit)) {
       	SDL_FillSurfaceRect(trs_box[expanded][graphics_char], &bits[bit], foreground);
       }
@@ -2209,53 +2245,52 @@ SDL_Surface *CreateSurfaceFromDataScale(char *data,
                      unsigned int width, 
 				     unsigned int height,
 				     unsigned int scale_x,
-				     unsigned int scale_y)
-{
-  static unsigned int *mydata, *currdata;
-  static unsigned char *mypixels, *currpixel;
-  int i, j, w;
+				     unsigned int scale_y) {
+	static unsigned int *mydata, *currdata;
+	static unsigned char *mypixels, *currpixel;
+	int i;
+	int j;
+	unsigned int w;
 
-  /* 
-   * Allocate a bit more room than necessary - There shouldn't be 
-   * any proportional characters, but just in case...             
-   * These arrays never get released, but they are really not     
-   * too big, so we should be OK.
-   */
-  mydata = (unsigned int *)malloc(width * height *
-		     scale_x * scale_y * sizeof(unsigned int));
-  mypixels= (unsigned char *)malloc(width * height * 8);
-  
-  /* Read the character data */ 
-  for (j= 0; j< width * height; j += 8)
-  {
-    for (i= j + 7; i >= j; i--)
-    {
-      *(mypixels + i)= (*(data + (j >> 3)) >> (i - j)) & 1;
-    }
-  }
+	/* 
+	* Allocate a bit more room than necessary - There shouldn't be 
+	* any proportional characters, but just in case...             
+	* These arrays never get released, but they are really not     
+	* too big, so we should be OK.
+	*/
+	mydata = (unsigned int *)malloc(width * height *
+	scale_x * scale_y * sizeof(unsigned int));
+	mypixels= (unsigned char *)malloc(width * height * 8);
 
-  currdata = mydata;
-  /* And prepare our rescaled character. */
-  for (j= 0; j< height * scale_y; j++)
-  {
-    currpixel = mypixels + ((j/scale_y) * width);
-    for (w= 0; w< width ; w++)
-    {
-    if (*currpixel++ == 0) {
-      for (i=0;i<scale_x;i++)
- 	    *currdata++ = background;
-      }
-    else {
-      for (i=0;i<scale_x;i++)
- 	    *currdata++ = foreground;
-      }
-    }
-  }
-  
-  free(mypixels);
-  
+	/* Read the character data */ 
+	for( j= 0; (unsigned int)j < (width * height); j += 8 ) {
+		for (i= j + 7; i >= j; i--) {
+		*(mypixels + i)= (*(data + (j >> 3)) >> (i - j)) & 1;
+		}
+	}
+
+	currdata = mydata;
+	/* And prepare our rescaled character. */
+	for( j= 0; (unsigned int)j < (height * scale_y); j++ ) {
+		currpixel = mypixels + ((j/scale_y) * width);
+		for( w= 0; w< width; w++ ) {
+			if (*currpixel++ == 0) {
+				for( i=0; (unsigned int)i<scale_x; i++ ) {
+					*currdata++ = background;
+				}
+			}
+			else {
+				for( i=0; (unsigned int)i<scale_x; i++ ) {
+					*currdata++ = foreground;
+				}
+			}
+		}
+	}
+
+	free(mypixels);
+
 	return(SDL_CreateSurfaceFrom(width*scale_x,height*scale_y,
-	                             SDL_PIXELFORMAT_XRGB8888, mydata, width*scale_x*4));
+		 SDL_PIXELFORMAT_XRGB8888, mydata, width*scale_x*4));
 }
 
 void bitmap_init(unsigned long foreground, unsigned long background)
@@ -2527,7 +2562,6 @@ void trs_hard_led(int drive, int on_off)
 void trs_screen_write_char(int position, int char_index)
 {
   int row,col,destx,desty;
-  int plane;
   SDL_Rect srcRect, destRect;
 
   trs_screen[position] = char_index;
@@ -2584,7 +2618,6 @@ void trs_screen_write_char(int position, int char_index)
 	(currentmode & (ALTERNATE+INVERSE)) == 0) {
       char_index -= 0x40;
     }
-    plane = 1;
     switch (currentmode & ~ALTERNATE) {
     case NORMAL:
       srcRect.x = 0;
@@ -2868,16 +2901,11 @@ void grafyx_redraw(void)
 {
   int i, j;
   char exp[MAX_SCALE];
-  int screen_x, screen_y, on_screen;
   int x,y;
   char byte;
   
   for (y=0;y<G_YSIZE;y++) {
     for (x=0;x<G_XSIZE;x++) {
-    screen_x = ((x - grafyx_xoffset + G_XSIZE) % G_XSIZE);
-    screen_y = ((y - grafyx_yoffset + G_YSIZE) % G_YSIZE);
-    on_screen = screen_x < row_chars &&
-                screen_y < col_chars*cur_char_height/scale_y;
       byte = grafyx_unscaled[y][x];
       switch (scale_x) {
       default:

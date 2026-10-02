@@ -159,47 +159,47 @@ void do_emt_mouse()
   }
 }
 
-void do_emt_getddir()
-{
-  if (REG_HL + REG_BC > 0x10000 ||
-      REG_HL + strlen(trs_disk_dir) + 1 > REG_HL + REG_BC) {
-    REG_A = EFAULT;
-    REG_F &= ~ZERO_MASK;
-    REG_BC = 0xFFFF;
-    return;
-  }
-  strcpy((char *)mem_pointer(REG_HL, 1), trs_disk_dir);
-  REG_A = 0;
-  REG_F |= ZERO_MASK;
-  REG_BC = strlen(trs_disk_dir);
+void do_emt_getddir() {
+	if (REG_HL + REG_BC > 0x10000 ||
+		REG_HL + strlen(trs_disk_dir) + 1 > REG_HL + REG_BC) {
+		REG_A = EFAULT;
+		REG_F &= ~ZERO_MASK;
+		REG_BC = 0xFFFF;
+		return;
+	}
+	strcpy((char *)mem_pointer(REG_HL, 1), trs_disk_dir);
+	REG_A = 0;
+	REG_F |= ZERO_MASK;
+	REG_BC = strlen(trs_disk_dir);
 }
 
-void do_emt_setddir()
-{
-  if (trs_emtsafe) {
-    error("potentially dangerous emulator trap blocked");
-    REG_A = EACCES;
-    REG_F &= ~ZERO_MASK;
-    return;
-  }
-  strcpy(trs_disk_dir,(char *)mem_pointer(REG_HL, 0));
-  if (trs_disk_dir[0] == '~' &&
+void do_emt_setddir() {
+	if (trs_emtsafe) {
+		error("potentially dangerous emulator trap blocked");
+		REG_A = EACCES;
+		REG_F &= ~ZERO_MASK;
+		return;
+	}
+	strcpy(trs_disk_dir,(char *)mem_pointer(REG_HL, 0));
+	if (trs_disk_dir[0] == '~' &&
 #ifdef _WIN32  
-      (trs_disk_dir[1] == '\\' || trs_disk_dir[1] == '\0')) {
+	   (trs_disk_dir[1] == '\\' || trs_disk_dir[1] == '\0')) {
 #else
-      (trs_disk_dir[1] == '/' || trs_disk_dir[1] == '\0')) {
-#endif                       
-    char* home = getenv("HOME");
-    if (home) {
+	   (trs_disk_dir[1] == '/' || trs_disk_dir[1] == '\0')) {
+#endif
+		char* home = getenv("HOME");
+	if (home) {
+		char tmppath[FILENAME_MAX];
+		strncpy(tmppath,trs_disk_dir,sizeof(tmppath));
 #ifdef _WIN32              
-      sprintf(trs_disk_dir, "%s\\%s", home, trs_disk_dir+1);
+		sprintf(trs_disk_dir, "%s\\%s", home, tmppath+1);
 #else
-      sprintf(trs_disk_dir, "%s/%s", home, trs_disk_dir+1);
-#endif      
-    }
-  }
-  REG_A = 0;
-  REG_F |= ZERO_MASK;
+		sprintf(trs_disk_dir, "%s/%s", home, tmppath+1);
+#endif
+		}
+	}
+	REG_A = 0;
+	REG_F |= ZERO_MASK;
 }
 
 void do_emt_open()
@@ -657,97 +657,98 @@ void do_emt_ftruncate()
 
 void do_emt_opendisk()
 {
-  char *name = (char *)mem_pointer(REG_HL, 0);
-  char *qname;
-  int i;
-  int oflag, eoflag;
+	char *name = (char *)mem_pointer(REG_HL, 0);
+	char *qname;
+	int i;
+	int oflag, eoflag;
 
-  eoflag = REG_BC;
-  switch (eoflag & EO_ACCMODE) {
-  case EO_RDONLY:
-  default:
-    oflag = O_RDONLY;
-    break;
-  case EO_WRONLY:
-    oflag = O_WRONLY;
-    break;
-  case EO_RDWR:
-    oflag = O_RDWR;
-    break;
-  }
-  if (eoflag & EO_CREAT)  oflag |= O_CREAT;
-  if (eoflag & EO_EXCL)   oflag |= O_EXCL;
-  if (eoflag & EO_TRUNC)  oflag |= O_TRUNC;
-  if (eoflag & EO_APPEND) oflag |= O_APPEND;
+	eoflag = REG_BC;
+	switch (eoflag & EO_ACCMODE) {
+		case EO_RDONLY:
+		default:
+			oflag = O_RDONLY;
+			break;
+		case EO_WRONLY:
+			oflag = O_WRONLY;
+			break;
+		case EO_RDWR:
+			oflag = O_RDWR;
+			break;
+	}
+	if (eoflag & EO_CREAT)  oflag |= O_CREAT;
+	if (eoflag & EO_EXCL)   oflag |= O_EXCL;
+	if (eoflag & EO_TRUNC)  oflag |= O_TRUNC;
+	if (eoflag & EO_APPEND) oflag |= O_APPEND;
 
-  if (trs_emtsafe && oflag != O_RDONLY) {
-    error("potentially dangerous emulator trap blocked");
-    REG_A = EACCES;
-    REG_F &= ~ZERO_MASK;
-    return;
-  }
+	if (trs_emtsafe && oflag != O_RDONLY) {
+		error("potentially dangerous emulator trap blocked");
+		REG_A = EACCES;
+		REG_F &= ~ZERO_MASK;
+		return;
+	}
 
 #ifdef _WIN32
-  if (*name == '\\' || *trs_disk_dir == '\0') {
+	if (*name == '\\' || *trs_disk_dir == '\0') {
 #else
-  if (*name == '/' || *trs_disk_dir == '\0') {
+	if (*name == '/' || *trs_disk_dir == '\0') {
 #endif            
-    qname = strdup(name);
-  } else {
-    qname = (char *)malloc(strlen(trs_disk_dir) + 1 + strlen(name) + 1);
-    strcpy(qname, trs_disk_dir);
+		qname = strdup(name);
+	} else {
+		qname = (char *)malloc(strlen(trs_disk_dir) + 1 + strlen(name) + 1);
+		strcpy(qname, trs_disk_dir);
 #ifdef _WIN32    
-    strcat(qname, "\\");
+		strcat(qname, "\\");
 #else
-    strcat(qname, "/");
+		strcat(qname, "/");
 #endif    
-    strcat(qname, name);
-  }
-  for (i = 0; i < MAX_OPENDISK; i++) {
-    if (!od[i].inuse) break;
-  }
-  if (i == MAX_OPENDISK) {
-    REG_DE = 0xffff;
-    REG_A = EMFILE;
-    REG_F &= ~ZERO_MASK;
-    free(qname);
-    return;
-  }
-  /* Check if this is a XTRSHARD open request, and if so, redirect
-     to the hardisk files in trs_hard.c */
-  if ((((strncmp(name,"hard1-",6) == 0) ||
-        (strncmp(name,"hard3-",6) == 0) ||
-        (strncmp(name,"hard4-",6) == 0)) &&
-        (strlen(name) == 7)) ||
-      ((strncmp(name,"hard4p-",7) == 0) &&
-        (strlen(name) == 8))) {
-    int hard_unit = name[strlen(name) -1] - '0';
-    if (hard_unit >=0 && hard_unit <= 3) {
-      strcpy(od[i].filename,trs_hard_getfilename(hard_unit));
-      od[i].fd = open(od[i].filename, oflag, REG_DE);
-      od[i].oflag = oflag;
-      if (od[i].fd >= 0)
-        od[i].xtrshard = 1;
-        xtrshard_fd[hard_unit] = od[i].fd;
-        od[i].xtrshard_unit = hard_unit;
-    } else {
-      od[i].fd = -1;
-    }
-  } else {
-    od[i].fd = open(qname, oflag, REG_DE);
-    strcpy(od[i].filename,qname);
-    od[i].xtrshard = 0;
-  }
-  free(qname);
-  if (od[i].fd >= 0) {
-    od[i].inuse = 1;
-    REG_A = 0;
-    REG_F |= ZERO_MASK;
-  } else {
-    REG_A = errno;
-    REG_F &= ~ZERO_MASK;
-  }
-  REG_DE = od[i].fd;
+		strcat(qname, name);
+	}
+	for (i = 0; i < MAX_OPENDISK; i++) {
+		if (!od[i].inuse) break;
+	}
+	if (i == MAX_OPENDISK) {
+		REG_DE = 0xffff;
+		REG_A = EMFILE;
+		REG_F &= ~ZERO_MASK;
+		free(qname);
+		return;
+	}
+	/* Check if this is a XTRSHARD open request, and if so, redirect
+	 to the hardisk files in trs_hard.c */
+	if ((((strncmp(name,"hard1-",6) == 0) ||
+		(strncmp(name,"hard3-",6) == 0) ||
+		(strncmp(name,"hard4-",6) == 0)) &&
+		(strlen(name) == 7)) ||
+	  ((strncmp(name,"hard4p-",7) == 0) &&
+		(strlen(name) == 8))) {
+		int hard_unit = name[strlen(name) -1] - '0';
+		if (hard_unit >=0 && hard_unit <= 3) {
+			strcpy(od[i].filename,trs_hard_getfilename(hard_unit));
+			od[i].fd = open(od[i].filename, oflag, REG_DE);
+			od[i].oflag = oflag;
+			if (od[i].fd >= 0) {
+				od[i].xtrshard = 1;
+			}
+			xtrshard_fd[hard_unit] = od[i].fd;
+			od[i].xtrshard_unit = hard_unit;
+		} else {
+			od[i].fd = -1;
+		}
+	} else {
+		od[i].fd = open(qname, oflag, REG_DE);
+		strcpy(od[i].filename,qname);
+		od[i].xtrshard = 0;
+	}
+	free(qname);
+	if (od[i].fd >= 0) {
+		od[i].inuse = 1;
+		REG_A = 0;
+		REG_F |= ZERO_MASK;
+	} else {
+		REG_A = errno;
+		REG_F &= ~ZERO_MASK;
+	}
+	REG_DE = od[i].fd;
 }
 
 int do_emt_closefd(int odindex)

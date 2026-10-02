@@ -32,6 +32,7 @@ int PasteManagerStartPaste(void)
 		paste_buffer_len = 0;
 	}
 	paste_buffer_offset = 0;
+	return 0;
 }
 
 void PasteManagerStartCopy(char *string)
