@@ -170,7 +170,7 @@ static Uint32 bright_red;
 static int paste_state = PASTE_IDLE;
 static int paste_lastkey = FALSE;
 extern int  PasteManagerStartPaste(void);
-extern void PasteManagerStartCopy(unsigned char *string);
+extern void PasteManagerStartCopy(char *string);
 extern int PasteManagerGetChar(unsigned short *character);
 
 #define COPY_OFF       0
@@ -375,7 +375,7 @@ extern int trs_timer_is_turbo();
 extern int trs_timer_switch_turbo();
 
 /* Private routines */
-void bitmap_init();
+void bitmap_init(unsigned long foreground, unsigned long background);
 void trs_event_init();
 void trs_event();
 
@@ -1416,7 +1416,7 @@ void ProcessCopySelection(int selectAll)
 				return;
 #endif			
 			if ((copyStatus == COPY_IDLE) &&
-				(mouse & SDL_BUTTON_MASK(1) == 0)) {
+				((mouse & SDL_BUTTON_MASK(1)) == 0)) {
 				return;		
 			}
 #ifdef MACOSX			
@@ -1689,9 +1689,9 @@ void trs_get_event(int wait)
 				      keyevt.mod, keyevt.scancode, keyevt.key);
 #endif
 #ifdef MACOSX
-				if (keyevt.mod & MENU_MOD == 0) {
+				if ( (keyevt.mod & MENU_MOD) == 0) {
 #else
-				if (keyevt.mod & SDL_KMOD_CTRL == 0) {
+				if ( (keyevt.mod & SDL_KMOD_CTRL) == 0) {
 #endif
 				if (copyStatus != COPY_IDLE)
 					copyStatus = COPY_CLEAR;

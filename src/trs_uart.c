@@ -69,6 +69,9 @@ char trs_uart_name[FILENAME_MAX] = "";
 #ifdef MACOSX
 char trs_uart_name[FILENAME_MAX] = "";
 #endif
+#ifdef __EMSCRIPTEN__
+char trs_uart_name[FILENAME_MAX] = "";
+#endif
 int trs_uart_switches =
   0x7 | TRS_UART_NOPAR | TRS_UART_WORD8; /* Default: 9600 8N1 */
 
@@ -167,7 +170,7 @@ trs_uart_init(int reset_button)
   return;
 #else
   if (initialized == 1 && uart.fd != -1) close(uart.fd);
-  if (trs_uart_name == NULL || trs_uart_name[0] == '\000') {
+  if (trs_uart_name[0] == '\000') {
     /* Emulate having no serial port */
     initialized = -1;
     return;

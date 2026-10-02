@@ -235,7 +235,7 @@ int TrsSoftBlit(SDL_Surface *src, SDL_Rect *srcrect,
 	/* Lock the destination if it's in hardware */
 	dst_locked = 0;
 	if ( SDL_MUSTLOCK(dst) ) {
-		if ( SDL_LockSurface(dst) < 0 ) {
+		if( !SDL_LockSurface(dst) ) {
 			return(-1);
 		} else {
 			dst_locked = 1;

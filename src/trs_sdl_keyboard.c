@@ -276,6 +276,15 @@ KeyTable ascii_key_table[] = {
 	{ SDLK_F2, TK_F2, TK_Neutral },
 	{ SDLK_F3, TK_F3, TK_Neutral },
 	{ SDLK_UNKNOWN, TK_NULL, TK_Neutral },
+	{ SDLK_KP_8, TK_North, TK_Neutral },
+	{ SDLK_KP_9, TK_Northeast, TK_Neutral },
+	{ SDLK_KP_6, TK_East, TK_Neutral },
+	{ SDLK_KP_3, TK_Southeast, TK_Neutral },
+	{ SDLK_KP_2, TK_South, TK_Neutral },
+	{ SDLK_KP_1, TK_Southwest, TK_Neutral },
+	{ SDLK_KP_4, TK_West, TK_Neutral },
+	{ SDLK_KP_7, TK_Northwest, TK_Neutral },
+	{ SDLK_KP_0, TK_Fire, TK_Neutral },
 };
 
 static int keystate[8] = { 0, };
@@ -399,31 +408,69 @@ void trs_joy_hat(unsigned char value)
     }
 }
 
-void trs_set_keypad_joystick(void)
-{
-  if (trs_keypad_joystick) {
-    ascii_key_table[0x100].bit_action = TK_Fire;
-    ascii_key_table[0x101].bit_action = TK_Northwest;
-    ascii_key_table[0x102].bit_action = TK_South;
-    ascii_key_table[0x103].bit_action = TK_Southeast;
-    ascii_key_table[0x104].bit_action = TK_West;
-    ascii_key_table[0x105].bit_action = TK_NULL;
-    ascii_key_table[0x106].bit_action = TK_East;
-    ascii_key_table[0x107].bit_action = TK_Southwest;
-    ascii_key_table[0x108].bit_action = TK_North;
-    ascii_key_table[0x109].bit_action = TK_Northeast;
-  } else {
-    ascii_key_table[0x100].bit_action = TK_0;
-    ascii_key_table[0x101].bit_action = TK_1;
-    ascii_key_table[0x102].bit_action = TK_2;
-    ascii_key_table[0x103].bit_action = TK_3;
-    ascii_key_table[0x104].bit_action = TK_4;
-    ascii_key_table[0x105].bit_action = TK_5;
-    ascii_key_table[0x106].bit_action = TK_6;
-    ascii_key_table[0x107].bit_action = TK_7;
-    ascii_key_table[0x108].bit_action = TK_8;
-    ascii_key_table[0x109].bit_action = TK_9;
-  }
+void trs_set_keypad_joystick(void) {
+	KeyTable* kt;
+	if (trs_keypad_joystick) {
+		for( kt=ascii_key_table; kt->key != SDLK_UNKNOWN; kt++ ) {
+			if( kt->key == SDLK_KP_8 ) {
+				kt->bit_action = TK_North;
+			}
+			else if( kt->key == SDLK_KP_9 ) {
+				kt->bit_action = TK_Northeast;
+			}
+			else if( kt->key == SDLK_KP_6 ) {
+				kt->bit_action = TK_Southeast;
+			}
+			else if( kt->key == SDLK_KP_3 ) {
+				kt->bit_action = TK_East;
+			}
+			else if( kt->key == SDLK_KP_2 ) {
+				kt->bit_action = TK_South;
+			}
+			else if( kt->key == SDLK_KP_1 ) {
+				kt->bit_action = TK_Southwest;
+			}
+			else if( kt->key == SDLK_KP_4 ) {
+				kt->bit_action = TK_West;
+			}
+			else if( kt->key == SDLK_KP_7 ) {
+				kt->bit_action = TK_Northwest;
+			}
+			else if( kt->key == SDLK_KP_0 ) {
+				kt->bit_action = TK_Fire;
+			}
+		}
+	} else {
+		for( kt=ascii_key_table; kt->key != SDLK_UNKNOWN; kt++ ) {
+			if( kt->key == SDLK_KP_8 ) {
+				kt->bit_action = TK_8;
+			}
+			else if( kt->key == SDLK_KP_9 ) {
+				kt->bit_action = TK_9;
+			}
+			else if( kt->key == SDLK_KP_6 ) {
+				kt->bit_action = TK_6;
+			}
+			else if( kt->key == SDLK_KP_3 ) {
+				kt->bit_action = TK_3;
+			}
+			else if( kt->key == SDLK_KP_2 ) {
+				kt->bit_action = TK_2;
+			}
+			else if( kt->key == SDLK_KP_1 ) {
+				kt->bit_action = TK_1;
+			}
+			else if( kt->key == SDLK_KP_4 ) {
+				kt->bit_action = TK_4;
+			}
+			else if( kt->key == SDLK_KP_7 ) {
+				kt->bit_action = TK_7;
+			}
+			else if( kt->key == SDLK_KP_0 ) {
+				kt->bit_action = TK_0;
+			}
+		}
+	}
 }
 
 void trs_open_joystick(void)

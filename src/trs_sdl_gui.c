@@ -106,7 +106,8 @@ static void trs_gui_display_message(char* title, char *message);
 static void trs_gui_create_filename_list();
 static void trs_gui_add_to_filename_list(char * filename);
 static int trs_gui_filename_cmp(char *name1, char *name2);
-static void trs_gui_quicksort(char **start, char **end, int (*sort_function) ());
+typedef int(*sort_function_t)(char *s1, char *s2);
+static void trs_gui_quicksort(char **start, char **end, sort_function_t sort_function);
 static void trs_gui_delete_filename_list(void);
 static int trs_gui_readdirectory(char *path, int browse_dir);
 static int trs_gui_input_string(char *title, char* input, char* output, int file);
@@ -445,7 +446,7 @@ int trs_gui_filename_cmp(char *name1, char *name2)
   return strcasecmp(name1, name2);   
 }
 
-void trs_gui_quicksort(char **start, char **end, int (*sort_function) ())
+void trs_gui_quicksort(char **start, char **end, sort_function_t sort_function)
 {
   while (start + 1 < end) {
 	char **left = start + 1;
@@ -497,7 +498,7 @@ int trs_gui_readdirectory(char *path, int browse_dir)
   directory = opendir(path);
   if (directory) {
     trs_gui_create_filename_list();
-	while (dir_entry = readdir(directory)) {
+	while( (dir_entry = readdir(directory)) != 0 ) {
 
 	  if (strcmp(dir_entry->d_name, ".") == 0)
 		continue;

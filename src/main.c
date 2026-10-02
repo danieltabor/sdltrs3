@@ -46,6 +46,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <SDL3/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include <sys/stat.h>
 
 #include "z80.h"
@@ -137,6 +140,17 @@ void trs_load_compiled_rom(int size, unsigned char rom[])
     }
 }
 
+/*
+#ifdef __EMSCRIPTEN__
+static void mainloop(void) {
+	int i;
+	for( i=0; i<100; i++ ) {
+		z80_run(0);
+	}
+}
+#endif
+*/
+
 int SDLmain(int argc, char *argv[])
 {
     int debug = FALSE;
@@ -144,12 +158,16 @@ int SDLmain(int argc, char *argv[])
 
     /* program_name must be set first because the error
      * printing routines use it. */
-    program_name = strrchr(argv[0], '/');
-    if (program_name == NULL) {
-      program_name = argv[0];
-    } else {
-      program_name++;
-    }
+    if( argc ) {
+		program_name = strrchr(argv[0], '/');
+		if (program_name == NULL) {
+			program_name = argv[0];
+		} else {
+			program_name++;
+		}
+	} else {
+		program_name = "sdltrs";
+	}
 
     check_endian();
 
@@ -167,7 +185,7 @@ int SDLmain(int argc, char *argv[])
     }
 	
     argc = trs_parse_command_line(argc, argv, &debug);
-    if (argc > 1) {
+	if (argc > 1) {
       fprintf(stderr, "%s: erroneous argument %s\n", program_name, argv[1]);
       exit(1);
     }
@@ -193,7 +211,7 @@ int SDLmain(int argc, char *argv[])
     if (stat(trs_printer_dir, &st) < 0) {
       strcpy(trs_printer_dir,".");
     }                   
- 
+
     mem_init();
     trs_disk_init(0);
     trs_rom_init();
@@ -209,11 +227,15 @@ int SDLmain(int argc, char *argv[])
 #ifdef MACOSX
 	TrsOriginSet();
 #endif
-	
+
+//#ifdef __EMSCRIPTEN__
+//		emscripten_set_main_loop(mainloop,1,1);
+//#else
     if (!debug || fullscreen) {
       /* Run continuously until exit or request to enter debugger */
       z80_run(TRUE);
     }
+//#endif
     printf("Entering debugger.\n");
     debug_init();
     debug_shell();
