@@ -2,8 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "SDL/SDL_video.h"
-#include "SDL/SDL_endian.h"
+#include <SDL3/SDL.h>
 #include "blit.h"
 
 static Uint8 *blitMap = NULL;
@@ -224,48 +223,6 @@ static void XorBlitImageTo4Byte(int width, int height, Uint8 *src,
 	}
 }
 
-void TrsBlitMap(SDL_Palette *src, SDL_PixelFormat *dst)
-{
-	Uint8 *map;
-	int i;
-	int  bpp;
-	unsigned alpha;
-	Uint32 mapValue;
-	
-	if (blitMap != NULL)
-		free(blitMap);
-
-	bpp = dst->BytesPerPixel;
-	map = (Uint8 *)malloc(src->ncolors*bpp);
-	if ( map == NULL ) {
-		return;
-	}
-
-	alpha = dst->Amask ? SDL_ALPHA_OPAQUE : 0;
-	for ( i=0; i<src->ncolors; ++i ) {
-        mapValue = SDL_MapRGBA(dst,src->colors[i].r,
-								   src->colors[i].g,
-								   src->colors[i].b,
-                                   alpha);
-		switch (dst->BytesPerPixel) {
-			case 1:
-				map[i*bpp] = (Uint8)mapValue; 
-			case 2: 
-				*((Uint16 *)(&map[i*bpp])) = (Uint16)mapValue;	
-				break;							
-			case 3: 
-                map[i*bpp] = mapValue >> 16;
-                map[i*bpp+1] = mapValue >> 8;
-                map[i*bpp+2] = mapValue & 0xFF;
-			    break;
-	        case 4: 
-			    *((Uint32 *)(&map[i*bpp])) = (Uint32)mapValue;	
-			    break;	
-		}				
-	}
-	blitMap = map;
-}
-
 
 /* The general purpose software blit routine */
 int TrsSoftBlit(SDL_Surface *src, SDL_Rect *srcrect,
@@ -288,18 +245,18 @@ int TrsSoftBlit(SDL_Surface *src, SDL_Rect *srcrect,
 		/* Set up the blit information */
 	srcpix = (Uint8 *)src->pixels +
 			(Uint16)srcrect->y*src->pitch +
-			((Uint16)srcrect->x*src->format->BitsPerPixel)/8;
-	srcskip=src->pitch-(((int)srcrect->w)*src->format->BitsPerPixel)/8;
+			((Uint16)srcrect->x*SDL_BITSPERPIXEL(src->format))/8;
+	srcskip=src->pitch-(((int)srcrect->w)*SDL_BITSPERPIXEL(src->format))/8;
 	dstpix = (Uint8 *)dst->pixels +
 			(Uint16)dstrect->y*dst->pitch +
-			(Uint16)dstrect->x*dst->format->BytesPerPixel;
+			(Uint16)dstrect->x*SDL_BYTESPERPIXEL(dst->format);
 	width = dstrect->w;
 	height = dstrect->h;
-	dstskip=dst->pitch-((int)dstrect->w)*dst->format->BytesPerPixel;
+	dstskip=dst->pitch-((int)dstrect->w)*SDL_BYTESPERPIXEL(dst->format);
 	map = blitMap;
 
 	/* Run the actual software blit */
-    switch(dst->format->BytesPerPixel) {
+    switch(SDL_BYTESPERPIXEL(dst->format)) {
        case 1:
 		   if (xor)
 				XorBlitImageTo1Byte(width, height, srcpix, srcskip,

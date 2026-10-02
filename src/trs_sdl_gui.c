@@ -578,7 +578,6 @@ int trs_gui_file_browse(char* path, char* filename, int browse_dir, char* type)
   trs_gui_limit_string(current_dir, limited_dir, 62);
   trs_gui_center_text(limited_dir,1,0);
   trs_gui_readdirectory(current_dir, browse_dir);
-	fprintf(stderr,"current_dir: %s\nbrowse_dir: %s\n",current_dir,browse_dir);fflush(0);
   if (filenamecount < 12)
     drawcount = filenamecount;
   else

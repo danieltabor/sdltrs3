@@ -1609,6 +1609,11 @@ void trs_get_event(int wait)
 {
 	SDL_Event event;
 	SDL_KeyboardEvent keyevt;
+	SDL_Keymod mod;
+	const bool *scan;
+	int scan_count;
+	int i;
+	SDL_Keycode key;
 	Uint32 keyup;
 	int ret;
 
@@ -1787,7 +1792,7 @@ void trs_get_event(int wait)
 				if (keyevt.mod & MENU_MOD) {
 					switch (keyevt.key) {
 #ifdef MACOSX
-						case SDLK_q:
+						case SDLK_Q:
 							trs_exit();
 							break;
 						case SDLK_COMMA:
@@ -1800,10 +1805,10 @@ void trs_get_event(int wait)
 							ControlManagerAboutApp();
 							break;
 	#endif
-						case SDLK_h: 
+						case SDLK_H: 
 							ControlManagerHideApp();
 							break;
-						case SDLK_m:
+						case SDLK_M:
 							ControlManagerMiniturize();
 							break;
 						case SDLK_SLASH:
@@ -2010,31 +2015,13 @@ void trs_get_event(int wait)
 					trs_gui_display_pause();
 					break;
 				}
-
-printf("[1] keyevt.key: %02x/%c  keyevt.mod: %02x\n",keyevt.key ,keyevt.key,keyevt.mod);
-				if ( ( (keyevt.mod & SDL_KMOD_SHIFT) || 
-				       (keyevt.mod & SDL_KMOD_CAPS) ) &&
-				     (keyevt.key >= 'a' && keyevt.key <= 'z') )  {
-					// Make Shift + CapsLock give lower case
-					keyevt.key = (int) keyevt.key - 0x20;
-				}
-printf("[1] keyevt.key: %02x/%c\n",keyevt.key ,keyevt.key);
-				if (keyevt.key == SDLK_RSHIFT && trs_model == 1) {
-					keyevt.key = SDLK_LSHIFT;
-				}
-
-				if (last_key[keyevt.scancode] != 0) {
-					trs_xlate_keysym(last_key[keyevt.scancode],0);
-				}
-				if (keyevt.key != 0) {
-					last_key[keyevt.scancode] = keyevt.key;
-					trs_xlate_keysym(keyevt.key,1);
-				}
+				/* Moved regular/repeatable keys to be manually scanned, so
+				 * we don't have to wait for the OS to provided repeated input */
 				break;
 
 			case SDL_EVENT_KEY_UP:
 				keyevt  = event.key;
-#if XDEBUG
+#if XDEBUGbool
 				debug("KeyUp: mod 0x%x, scancode 0x%x keycode 0x%x\n",
 				      keyevt.mod, keyevt.scancode, keyevt.key);
 #endif
@@ -2072,6 +2059,24 @@ printf("[1] keyevt.key: %02x/%c\n",keyevt.key ,keyevt.key);
 				//debug("Unhandled event: type %d\n", event.type);
 #endif
 				break;
+		}
+
+		//Handle any regaular emulator inputs
+		//This will allow keys to repeat everytime we
+		//check.
+		mod = SDL_GetModState();
+		scan = SDL_GetKeyboardState(&scan_count);
+		for( i=0; i<scan_count; i++ ) {
+			if( scan[i] ) {
+				key = SDL_GetKeyFromScancode(i, mod, false);
+				if( key == SDLK_RSHIFT && trs_model == 1 ) {
+					key = SDLK_LSHIFT;
+				}
+				if( key != 0) {
+					last_key[i] = key;
+					trs_xlate_keysym(key,1);
+				}
+			}
 		}
 	} while (!wait);
 }

@@ -155,346 +155,127 @@ static int key_queue_entries;
 
 #define JOY_BOUNCE 20000
 
-typedef struct
-{
-    int bit_action;
-    int shift_action;
+typedef struct {
+	SDL_Keycode key;
+	int bit_action;
+	int shift_action;
 } KeyTable;
 
 /* Keysyms in the extended ASCII range 0x0000 - 0x00ff */
 
 KeyTable ascii_key_table[] = {
-/* 0x0 */     { TK_NULL, TK_Neutral }, /* undefined keysyms... */
-/* 0x1 */     { TK_NULL, TK_Neutral },
-/* 0x2 */     { TK_NULL, TK_Neutral },
-/* 0x3 */     { TK_NULL, TK_Neutral },
-/* 0x4 */     { TK_NULL, TK_Neutral },
-/* 0x5 */     { TK_NULL, TK_Neutral },
-/* 0x6 */     { TK_NULL, TK_Neutral },
-/* 0x7 */     { TK_NULL, TK_Neutral },
-/* 0x8 */     { TK_Left, TK_Neutral },
-/* 0x9 */     { TK_Right, TK_Neutral },
-/* 0xa */     { TK_NULL, TK_Neutral },
-/* 0xb */     { TK_NULL, TK_Neutral },
-/* 0xc */     { TK_Clear, TK_Neutral },
-/* 0xd */     { TK_Enter, TK_Neutral },
-/* 0xe */     { TK_NULL, TK_Neutral },
-/* 0xf */     { TK_NULL, TK_Neutral },
-/* 0x10 */    { TK_NULL, TK_Neutral },
-/* 0x11 */    { TK_NULL, TK_Neutral },
-/* 0x12 */    { TK_NULL, TK_Neutral },
-/* 0x13 */    { TK_NULL, TK_Neutral },
-/* 0x14 */    { TK_NULL, TK_Neutral },
-/* 0x15 */    { TK_NULL, TK_Neutral },
-/* 0x16 */    { TK_NULL, TK_Neutral },
-/* 0x17 */    { TK_NULL, TK_Neutral },
-/* 0x18 */    { TK_NULL, TK_Neutral },
-/* 0x19 */    { TK_NULL, TK_Neutral },
-/* 0x1a */    { TK_NULL, TK_Neutral },
-/* 0x1b */    { TK_Break, TK_Neutral },
-/* 0x1c */    { TK_NULL, TK_Neutral },
-/* 0x1d */    { TK_NULL, TK_Neutral },
-/* 0x1e */    { TK_NULL, TK_Neutral },
-/* 0x1f */    { TK_NULL, TK_Neutral }, 
-/* 0x20 */    { TK_Space, TK_Neutral },
-/* 0x21 */    { TK_1, TK_ForceShift },
-/* 0x22 */    { TK_2, TK_ForceShift },
-/* 0x23 */    { TK_3, TK_ForceShift },
-/* 0x24 */    { TK_4, TK_ForceShift },
-/* 0x25 */    { TK_5, TK_ForceShift },
-/* 0x26 */    { TK_6, TK_ForceShift },
-/* 0x27 */    { TK_7, TK_ForceShift },
-/* 0x28 */    { TK_8, TK_ForceShift },
-/* 0x29 */    { TK_9, TK_ForceShift },
-/* 0x2a */    { TK_Colon, TK_ForceShift },
-/* 0x2b */    { TK_Semicolon, TK_ForceShift },
-/* 0x2c */    { TK_Comma, TK_ForceNoShift },
-/* 0x2d */    { TK_Minus, TK_ForceNoShift },
-/* 0x2e */    { TK_Period, TK_ForceNoShift },
-/* 0x2f */    { TK_Slash, TK_ForceNoShift },
-/* 0x30 */    { TK_0, TK_ForceNoShift },
-/* 0x31 */    { TK_1, TK_ForceNoShift },
-/* 0x32 */    { TK_2, TK_ForceNoShift },
-/* 0x33 */    { TK_3, TK_ForceNoShift },
-/* 0x34 */    { TK_4, TK_ForceNoShift },
-/* 0x35 */    { TK_5, TK_ForceNoShift },
-/* 0x36 */    { TK_6, TK_ForceNoShift },
-/* 0x37 */    { TK_7, TK_ForceNoShift },
-/* 0x38 */    { TK_8, TK_ForceNoShift },
-/* 0x39 */    { TK_9, TK_ForceNoShift },
-/* 0x3a */    { TK_Colon, TK_ForceNoShift },
-/* 0x3b */    { TK_Semicolon, TK_ForceNoShift },
-/* 0x3c */    { TK_Comma, TK_ForceShift },
-/* 0x3d */    { TK_Minus, TK_ForceShift },
-/* 0x3e */    { TK_Period, TK_ForceShift },
-/* 0x3f */    { TK_Slash, TK_ForceShift },
-/* 0x40 */    { TK_AtSign, TK_ForceNoShift },
-/* 0x41 */    { TK_A,  TK_ForceShift },
-/* 0x42 */    { TK_B,  TK_ForceShift },
-/* 0x43 */    { TK_C,  TK_ForceShift },
-/* 0x44 */    { TK_D,  TK_ForceShift },
-/* 0x45 */    { TK_E,  TK_ForceShift },
-/* 0x46 */    { TK_F,  TK_ForceShift },
-/* 0x47 */    { TK_G,  TK_ForceShift },
-/* 0x48 */    { TK_H,  TK_ForceShift },
-/* 0x49 */    { TK_I,  TK_ForceShift },
-/* 0x4a */    { TK_J,  TK_ForceShift },
-/* 0x4b */    { TK_K,  TK_ForceShift },
-/* 0x4c */    { TK_L,  TK_ForceShift },
-/* 0x4d */    { TK_M,  TK_ForceShift },
-/* 0x4e */    { TK_N,  TK_ForceShift },
-/* 0x4f */    { TK_O,  TK_ForceShift },
-/* 0x50 */    { TK_P,  TK_ForceShift },
-/* 0x51 */    { TK_Q,  TK_ForceShift },
-/* 0x52 */    { TK_R,  TK_ForceShift },
-/* 0x53 */    { TK_S,  TK_ForceShift },
-/* 0x54 */    { TK_T,  TK_ForceShift },
-/* 0x55 */    { TK_U,  TK_ForceShift },
-/* 0x56 */    { TK_V,  TK_ForceShift },
-/* 0x57 */    { TK_W,  TK_ForceShift },
-/* 0x58 */    { TK_X,  TK_ForceShift },
-/* 0x59 */    { TK_Y,  TK_ForceShift },
-/* 0x5a */    { TK_Z,  TK_ForceShift },
-/* 0x5b */    { TK_LeftBracket, TK_ForceNoShift },
-/* 0x5c */    { TK_Backslash, TK_ForceNoShift },
-/* 0x5d */    { TK_RightBracket, TK_ForceNoShift },
-/* 0x5e */    { TK_Caret, TK_ForceNoShift },
-/* 0x5f */    { TK_Underscore, TK_ForceNoShift },
-/* 0x60 */    { TK_AtSign,  TK_ForceShift },
-/* 0x61 */    { TK_A, TK_ForceNoShift },
-/* 0x62 */    { TK_B, TK_ForceNoShift },
-/* 0x63 */    { TK_C, TK_ForceNoShift },
-/* 0x64 */    { TK_D, TK_ForceNoShift },
-/* 0x65 */    { TK_E, TK_ForceNoShift },
-/* 0x66 */    { TK_F, TK_ForceNoShift },
-/* 0x67 */    { TK_G, TK_ForceNoShift },
-/* 0x68 */    { TK_H, TK_ForceNoShift },
-/* 0x69 */    { TK_I, TK_ForceNoShift },
-/* 0x6a */    { TK_J, TK_ForceNoShift },
-/* 0x6b */    { TK_K, TK_ForceNoShift },
-/* 0x6c */    { TK_L, TK_ForceNoShift },
-/* 0x6d */    { TK_M, TK_ForceNoShift },
-/* 0x6e */    { TK_N, TK_ForceNoShift },
-/* 0x6f */    { TK_O, TK_ForceNoShift },
-/* 0x70 */    { TK_P, TK_ForceNoShift },
-/* 0x71 */    { TK_Q, TK_ForceNoShift },
-/* 0x72 */    { TK_R, TK_ForceNoShift },
-/* 0x73 */    { TK_S, TK_ForceNoShift },
-/* 0x74 */    { TK_T, TK_ForceNoShift },
-/* 0x75 */    { TK_U, TK_ForceNoShift },
-/* 0x76 */    { TK_V, TK_ForceNoShift },
-/* 0x77 */    { TK_W, TK_ForceNoShift },
-/* 0x78 */    { TK_X, TK_ForceNoShift },
-/* 0x79 */    { TK_Y, TK_ForceNoShift },
-/* 0x7a */    { TK_Z, TK_ForceNoShift },
-/* 0x7b */    { TK_LeftBracket, TK_ForceShift },
-/* 0x7c */    { TK_Backslash, TK_ForceShift },
-/* 0x7d */    { TK_RightBracket, TK_ForceShift },
-/* 0x7e */    { TK_Caret, TK_ForceShift },
-/* 0x7f */    { TK_Left, TK_Neutral },
-/* 0x80 */    { TK_NULL, TK_Neutral },
-/* 0x81 */    { TK_NULL, TK_Neutral },
-/* 0x82 */    { TK_NULL, TK_Neutral },
-/* 0x83 */    { TK_NULL, TK_Neutral },
-/* 0x84 */    { TK_NULL, TK_Neutral },
-/* 0x85 */    { TK_NULL, TK_Neutral },
-/* 0x86 */    { TK_NULL, TK_Neutral },
-/* 0x87 */    { TK_NULL, TK_Neutral },
-/* 0x88 */    { TK_NULL, TK_Neutral },
-/* 0x89 */    { TK_NULL, TK_Neutral },
-/* 0x8a */    { TK_NULL, TK_Neutral },
-/* 0x8b */    { TK_NULL, TK_Neutral },
-/* 0x8c */    { TK_NULL, TK_Neutral },
-/* 0x8d */    { TK_NULL, TK_Neutral },
-/* 0x8e */    { TK_NULL, TK_Neutral },
-/* 0x8f */    { TK_NULL, TK_Neutral },
-/* 0x90 */    { TK_NULL, TK_Neutral },
-/* 0x91 */    { TK_NULL, TK_Neutral },
-/* 0x92 */    { TK_NULL, TK_Neutral },
-/* 0x93 */    { TK_NULL, TK_Neutral },
-/* 0x94 */    { TK_NULL, TK_Neutral },
-/* 0x95 */    { TK_NULL, TK_Neutral },
-/* 0x96 */    { TK_NULL, TK_Neutral },
-/* 0x97 */    { TK_NULL, TK_Neutral },
-/* 0x98 */    { TK_NULL, TK_Neutral },
-/* 0x99 */    { TK_NULL, TK_Neutral },
-/* 0x9a */    { TK_NULL, TK_Neutral },
-/* 0x9b */    { TK_NULL, TK_Neutral },
-/* 0x9c */    { TK_NULL, TK_Neutral },
-/* 0x9d */    { TK_NULL, TK_Neutral },
-/* 0x9e */    { TK_NULL, TK_Neutral },
-/* 0x9f */    { TK_NULL, TK_Neutral },
-/* 0xa0 */    { TK_NULL, TK_Neutral },
-/* 0xa1 */    { TK_NULL, TK_Neutral },
-/* 0xa2 */    { TK_NULL, TK_Neutral },
-/* 0xa3 */    { TK_NULL, TK_Neutral },
-/* 0xa4 */    { TK_NULL, TK_Neutral },
-/* 0xa5 */    { TK_NULL, TK_Neutral },
-/* 0xa6 */    { TK_NULL, TK_Neutral },
-/* 0xa7 */    { TK_NULL, TK_Neutral },
-/* 0xa8 */    { TK_NULL, TK_Neutral },
-/* 0xa9 */    { TK_NULL, TK_Neutral },
-/* 0xaa */    { TK_NULL, TK_Neutral },
-/* 0xab */    { TK_NULL, TK_Neutral },
-/* 0xac */    { TK_NULL, TK_Neutral },
-/* 0xad */    { TK_NULL, TK_Neutral },
-/* 0xae */    { TK_NULL, TK_Neutral },
-/* 0xaf */    { TK_NULL, TK_Neutral },
-/* 0xb0 */    { TK_NULL, TK_Neutral },
-/* 0xb1 */    { TK_NULL, TK_Neutral },
-/* 0xb2 */    { TK_NULL, TK_Neutral },
-/* 0xb3 */    { TK_NULL, TK_Neutral },
-/* 0xb4 */    { TK_NULL, TK_Neutral },
-/* 0xb5 */    { TK_NULL, TK_Neutral },
-/* 0xb6 */    { TK_NULL, TK_Neutral },
-/* 0xb7 */    { TK_NULL, TK_Neutral },
-/* 0xb8 */    { TK_NULL, TK_Neutral },
-/* 0xb9 */    { TK_NULL, TK_Neutral },
-/* 0xba */    { TK_NULL, TK_Neutral },
-/* 0xbb */    { TK_NULL, TK_Neutral },
-/* 0xbc */    { TK_NULL, TK_Neutral },
-/* 0xbd */    { TK_NULL, TK_Neutral },
-/* 0xbe */    { TK_NULL, TK_Neutral },
-/* 0xbf */    { TK_NULL, TK_Neutral },
-/* 0xc0 */    { TK_NULL, TK_Neutral },
-/* 0xc1 */    { TK_NULL, TK_Neutral },
-/* 0xc2 */    { TK_NULL, TK_Neutral },
-/* 0xc3 */    { TK_NULL, TK_Neutral },
-/* 0xc4 */    { TK_LeftBracket, TK_ForceShift },    /* Ä */
-/* 0xc5 */    { TK_NULL, TK_Neutral },
-/* 0xc6 */    { TK_NULL, TK_Neutral },
-/* 0xc7 */    { TK_NULL, TK_Neutral },
-/* 0xc8 */    { TK_NULL, TK_Neutral },
-/* 0xc9 */    { TK_NULL, TK_Neutral },
-/* 0xca */    { TK_NULL, TK_Neutral },
-/* 0xcb */    { TK_NULL, TK_Neutral },
-/* 0xcc */    { TK_NULL, TK_Neutral },
-/* 0xcd */    { TK_NULL, TK_Neutral },
-/* 0xce */    { TK_NULL, TK_Neutral },
-/* 0xcf */    { TK_NULL, TK_Neutral },
-/* 0xd0 */    { TK_NULL, TK_Neutral },
-/* 0xd1 */    { TK_NULL, TK_Neutral },
-/* 0xd2 */    { TK_NULL, TK_Neutral },
-/* 0xd3 */    { TK_NULL, TK_Neutral },
-/* 0xd4 */    { TK_NULL, TK_Neutral },
-/* 0xd5 */    { TK_NULL, TK_Neutral },
-/* 0xd6 */    { TK_Backslash, TK_ForceShift },      /* Ö */
-/* 0xd7 */    { TK_NULL, TK_Neutral },
-/* 0xd8 */    { TK_NULL, TK_Neutral },
-/* 0xd9 */    { TK_NULL, TK_Neutral },
-/* 0xda */    { TK_NULL, TK_Neutral },
-/* 0xdb */    { TK_NULL, TK_Neutral },
-/* 0xdc */    { TK_RightBracket, TK_ForceShift },   /* Ü */
-/* 0xdd */    { TK_NULL, TK_Neutral },
-/* 0xde */    { TK_NULL, TK_Neutral },
-/* 0xdf */    { TK_Caret, TK_ForceNoShift },        /* ß */
-/* 0xe0 */    { TK_NULL, TK_Neutral },
-/* 0xe1 */    { TK_NULL, TK_Neutral },
-/* 0xe2 */    { TK_NULL, TK_Neutral },
-/* 0xe3 */    { TK_NULL, TK_Neutral },
-/* 0xe4 */    { TK_LeftBracket, TK_ForceNoShift },  /* ä */
-/* 0xe5 */    { TK_NULL, TK_Neutral },
-/* 0xe6 */    { TK_NULL, TK_Neutral },
-/* 0xe7 */    { TK_NULL, TK_Neutral },
-/* 0xe8 */    { TK_NULL, TK_Neutral },
-/* 0xe9 */    { TK_NULL, TK_Neutral },
-/* 0xea */    { TK_NULL, TK_Neutral },
-/* 0xeb */    { TK_NULL, TK_Neutral },
-/* 0xec */    { TK_NULL, TK_Neutral },
-/* 0xed */    { TK_NULL, TK_Neutral },
-/* 0xee */    { TK_NULL, TK_Neutral },
-/* 0xef */    { TK_NULL, TK_Neutral },
-/* 0xf0 */    { TK_NULL, TK_Neutral },
-/* 0xf1 */    { TK_NULL, TK_Neutral },
-/* 0xf2 */    { TK_NULL, TK_Neutral },
-/* 0xf3 */    { TK_NULL, TK_Neutral },
-/* 0xf4 */    { TK_NULL, TK_Neutral },
-/* 0xf5 */    { TK_NULL, TK_Neutral },
-/* 0xf6 */    { TK_Backslash, TK_ForceNoShift },    /* ö */
-/* 0xf7 */    { TK_NULL, TK_Neutral },
-/* 0xf8 */    { TK_NULL, TK_Neutral },
-/* 0xf9 */    { TK_NULL, TK_Neutral },
-/* 0xfa */    { TK_NULL, TK_Neutral },
-/* 0xfb */    { TK_NULL, TK_Neutral },
-/* 0xfc */    { TK_RightBracket, TK_ForceNoShift }, /* ü */
-/* 0xfd */    { TK_NULL, TK_Neutral },
-/* 0xfe */    { TK_NULL, TK_Neutral },
-/* 0xff */    { TK_NULL, TK_Neutral },
-/* 0x100 */    { TK_Fire, TK_Neutral },
-/* 0x101 */    { TK_Northwest, TK_Neutral },
-/* 0x102 */    { TK_South, TK_Neutral },
-/* 0x103 */    { TK_Southeast, TK_Neutral },
-/* 0x104 */    { TK_West, TK_Neutral },
-/* 0x105 */    { TK_NULL, TK_Neutral },
-/* 0x106 */    { TK_East, TK_Neutral },
-/* 0x107 */    { TK_Southwest, TK_Neutral },
-/* 0x108 */    { TK_North, TK_Neutral },
-/* 0x109 */    { TK_Northeast, TK_Neutral },
-/* 0x10a */    { TK_Left, TK_Neutral },
-/* 0x10b */    { TK_Slash, TK_Neutral },
-/* 0x10c */    { TK_Colon, TK_ForceShift },
-/* 0x10d */    { TK_Minus, TK_Neutral },
-/* 0x10e */    { TK_Semicolon, TK_ForceShift },
-/* 0x10f */    { TK_Enter, TK_Neutral },
-/* 0x110 */    { TK_Minus,  TK_ForceShift },
-/* 0x111 */    { TK_Up, TK_Neutral },
-/* 0x112 */    { TK_Down, TK_Neutral },
-/* 0x113 */    { TK_Right, TK_Neutral },
-/* 0x114 */    { TK_Left, TK_Neutral },
-/* 0x115 */    { TK_Underscore, TK_Neutral },
-/* 0x116 */    { TK_Clear, TK_Neutral },
-/* 0x117 */    { TK_Unused, TK_Neutral },
-/* 0x118 */    { TK_LeftShift, TK_Neutral },
-/* 0x119 */    { TK_RightShift, TK_Neutral },
-/* 0x11a */    { TK_F1, TK_Neutral },
-/* 0x11b */    { TK_F2, TK_Neutral },
-/* 0x11c */    { TK_F3, TK_Neutral },
-/* 0x11d */    { TK_CapsLock, TK_Neutral },
-/* 0x11e */    { TK_AtSign, TK_Neutral },
-/* 0x11f */    { TK_0, TK_Neutral },
-/* 0x120 */    { TK_NULL, TK_Neutral },
-/* 0x121 */    { TK_NULL, TK_Neutral },
-/* 0x122 */    { TK_NULL, TK_Neutral },
-/* 0x123 */    { TK_NULL, TK_Neutral },
-/* 0x124 */    { TK_NULL, TK_Neutral },
-/* 0x125 */    { TK_NULL, TK_Neutral },
-/* 0x126 */    { TK_NULL, TK_Neutral },
-/* 0x127 */    { TK_NULL, TK_Neutral },
-/* 0x128 */    { TK_NULL, TK_Neutral },
-/* 0x129 */    { TK_NULL, TK_Neutral },
-/* 0x12a */    { TK_NULL, TK_Neutral },
-/* 0x12b */    { TK_NULL, TK_Neutral },
-/* 0x12c */    { TK_NULL, TK_Neutral },
-/* 0x12d */    { TK_NULL, TK_Neutral },
-/* 0x12e */    { TK_AtSign, TK_Neutral },
-/* 0x12f */    { TK_RightShift, TK_Neutral },
-/* 0x130 */    { TK_LeftShift, TK_Neutral },
-/* 0x131 */    { TK_Ctrl, TK_Neutral },
-/* 0x132 */    { TK_Ctrl, TK_Neutral },
-#ifdef MACOSX
-/* 0x133 */    { TK_NULL, TK_Neutral },
-#else
-/* 0x133 */    { TK_Down, TK_ForceShiftPersistent },
-#endif
-/* 0x134 */    { TK_NULL, TK_Neutral },
-#ifdef MACOSX
-/* 0x135 */    { TK_Down, TK_ForceShiftPersistent },
-#else
-/* 0x135 */    { TK_NULL, TK_Neutral },
-#endif
-/* 0x136 */    { TK_NULL, TK_Neutral },
-/* 0x137 */    { TK_NULL, TK_Neutral },
-/* 0x138 */    { TK_NULL, TK_Neutral },
-/* 0x139 */    { TK_NULL, TK_Neutral },
-/* 0x13a */    { TK_NULL, TK_Neutral },
-/* 0x13b */    { TK_NULL, TK_Neutral },
-/* 0x13c */    { TK_NULL, TK_Neutral },
-/* 0x13d */    { TK_NULL, TK_Neutral },
-/* 0x13e */    { TK_Break, TK_Neutral },
-/* 0x13f */    { TK_NULL, TK_Neutral },
-/* 0x140 */    { TK_NULL, TK_Neutral },
-/* 0x141 */    { TK_NULL, TK_Neutral },
-/* 0x142 */    { TK_NULL, TK_Neutral },
+	{ SDLK_AT, TK_AtSign, TK_ForceNoShift },
+	{ 'a', TK_A, TK_ForceNoShift },
+	{ 'A', TK_A,  TK_ForceShift },
+	{ 'b', TK_B, TK_ForceNoShift },
+	{ 'B', TK_B,  TK_ForceShift },
+	{ 'c', TK_C, TK_ForceNoShift },
+	{ 'C', TK_C,  TK_ForceShift },
+	{ 'd', TK_D, TK_ForceNoShift },
+	{ 'D', TK_D,  TK_ForceShift },
+	{ 'e', TK_E, TK_ForceNoShift },
+	{ 'E', TK_E,  TK_ForceShift },
+	{ 'f', TK_F, TK_ForceNoShift },
+	{ 'F', TK_F,  TK_ForceShift },
+	{ 'g', TK_G, TK_ForceNoShift },
+	{ 'G', TK_G,  TK_ForceShift },
+	{ 'h', TK_H, TK_ForceNoShift },
+	{ 'H', TK_H,  TK_ForceShift },
+	{ 'i', TK_I, TK_ForceNoShift },
+	{ 'I', TK_I,  TK_ForceShift },
+	{ 'j', TK_J, TK_ForceNoShift },
+	{ 'J', TK_J,  TK_ForceShift },
+	{ 'K', TK_K,  TK_ForceShift },
+	{ 'k', TK_K, TK_ForceNoShift },
+	{ 'l', TK_L, TK_ForceNoShift },
+	{ 'L', TK_L,  TK_ForceShift },
+	{ 'm', TK_M, TK_ForceNoShift },
+	{ 'M', TK_M,  TK_ForceShift },
+	{ 'n', TK_N, TK_ForceNoShift },
+	{ 'N', TK_N,  TK_ForceShift },
+	{ 'o', TK_O, TK_ForceNoShift },
+	{ 'O', TK_O,  TK_ForceShift },
+	{ 'p', TK_P, TK_ForceNoShift },
+	{ 'P', TK_P,  TK_ForceShift },
+	{ 'q', TK_Q, TK_ForceNoShift },
+	{ 'Q', TK_Q,  TK_ForceShift },
+	{ 'r', TK_R, TK_ForceNoShift },
+	{ 'R', TK_R,  TK_ForceShift },
+	{ 's', TK_S, TK_ForceNoShift },
+	{ 'S', TK_S,  TK_ForceShift },
+	{ 't', TK_T, TK_ForceNoShift },
+	{ 'T', TK_T,  TK_ForceShift },
+	{ 'u', TK_U, TK_ForceNoShift },
+	{ 'U', TK_U,  TK_ForceShift },
+	{ 'v', TK_V, TK_ForceNoShift },
+	{ 'V', TK_V,  TK_ForceShift },
+	{ 'w', TK_W, TK_ForceNoShift },
+	{ 'W', TK_W,  TK_ForceShift },
+	{ 'x', TK_X, TK_ForceNoShift },
+	{ 'X', TK_X,  TK_ForceShift },
+	{ 'y', TK_Y, TK_ForceNoShift },
+	{ 'Y', TK_Y,  TK_ForceShift },
+	{ 'z', TK_Z, TK_ForceNoShift },
+	{ 'Z', TK_Z,  TK_ForceShift },
+	{ SDLK_LEFTBRACKET, TK_LeftBracket, TK_ForceNoShift },
+	{ SDLK_LEFTBRACE, TK_LeftBracket, TK_ForceShift },
+	{ SDLK_BACKSLASH, TK_Backslash, TK_ForceNoShift },
+	{ SDLK_PIPE, TK_Backslash, TK_ForceShift },
+	{ SDLK_RIGHTBRACKET, TK_RightBracket, TK_ForceNoShift },
+	{ SDLK_RIGHTBRACE, TK_RightBracket, TK_ForceShift },
+	{ SDLK_CARET, TK_Caret, TK_ForceNoShift },
+	{ SDLK_TILDE, TK_Caret, TK_ForceShift },
+	{ SDLK_UNDERSCORE, TK_Underscore, TK_ForceNoShift },
+	{ SDLK_0, TK_0, TK_ForceNoShift },
+	{ SDLK_1, TK_1, TK_ForceNoShift },
+	{ SDLK_EXCLAIM, TK_1, TK_ForceShift },
+	{ SDLK_2, TK_2, TK_ForceNoShift },
+	{ SDLK_DBLAPOSTROPHE, TK_2, TK_ForceShift },
+	{ SDLK_3, TK_3, TK_ForceNoShift },
+	{ SDLK_HASH, TK_3, TK_ForceShift },
+	{ SDLK_4, TK_4, TK_ForceNoShift },
+	{ SDLK_DOLLAR, TK_4, TK_ForceShift },
+	{ SDLK_5, TK_5, TK_ForceNoShift },
+	{ SDLK_PERCENT, TK_5, TK_ForceShift },
+	{ SDLK_6, TK_6, TK_ForceNoShift },
+	{ SDLK_AMPERSAND, TK_6, TK_ForceShift },
+	{ SDLK_7, TK_7, TK_ForceNoShift },
+	{ SDLK_APOSTROPHE, TK_7, TK_ForceShift },
+	{ SDLK_8, TK_8, TK_ForceNoShift },
+	{ SDLK_LEFTPAREN, TK_8, TK_ForceShift },
+	{ SDLK_9, TK_9, TK_ForceNoShift },
+	{ SDLK_RIGHTPAREN, TK_9, TK_ForceShift },
+	{ SDLK_COLON, TK_Colon, TK_ForceNoShift },
+	{ SDLK_ASTERISK, TK_Colon, TK_ForceShift },
+	{ SDLK_SEMICOLON, TK_Semicolon, TK_ForceNoShift },
+	{ SDLK_PLUS, TK_Semicolon, TK_ForceShift },
+	{ SDLK_COMMA, TK_Comma, TK_ForceNoShift },
+	{ SDLK_LESS, TK_Comma, TK_ForceShift },
+	{ SDLK_MINUS, TK_Minus, TK_ForceNoShift },
+	{ SDLK_EQUALS, TK_Minus, TK_ForceShift },
+	{ SDLK_PERIOD, TK_Period, TK_ForceNoShift },
+	{ SDLK_GREATER, TK_Period, TK_ForceShift },
+	{ SDLK_SLASH, TK_Slash, TK_ForceNoShift },
+	{ SDLK_QUESTION, TK_Slash, TK_ForceShift },
+	{ SDLK_RETURN, TK_Enter, TK_Neutral },
+	{ SDLK_CLEAR, TK_Clear, TK_Neutral },
+	{ SDLK_HOME, TK_Clear, TK_Neutral },
+	{ SDLK_ESCAPE, TK_Break, TK_Neutral },
+	{ SDLK_UP, TK_Up, TK_Neutral },
+	{ SDLK_DOWN, TK_Down, TK_Neutral },
+	{ SDLK_LEFT, TK_Left, TK_Neutral },
+	{ SDLK_BACKSPACE, TK_Left, TK_Neutral },
+	{ SDLK_RIGHT, TK_Right, TK_Neutral },
+	{ SDLK_SPACE, TK_Space, TK_Neutral },
+	{ SDLK_LSHIFT, TK_LeftShift, TK_Neutral },
+	{ SDLK_RSHIFT, TK_RightShift, TK_Neutral },
+	{ SDLK_LCTRL, TK_Ctrl, TK_Neutral },
+	{ SDLK_RCTRL, TK_Ctrl, TK_Neutral },
+	{ SDLK_CAPSLOCK, TK_CapsLock, TK_Neutral },
+	{ SDLK_F1, TK_F1, TK_Neutral },
+	{ SDLK_F2, TK_F2, TK_Neutral },
+	{ SDLK_F3, TK_F3, TK_Neutral },
+	{ SDLK_UNKNOWN, TK_NULL, TK_Neutral },
 };
 
 static int keystate[8] = { 0, };
@@ -716,43 +497,39 @@ int trs_joystick_in()
   return ~joystate;
 }
 
-void trs_xlate_keysym(int keysym, int key_down)
-{
-    KeyTable* kt;
-    static int shift_action = TK_Neutral;
-	
-    if( !key_down && !keysym ) {
-	/* force all keys up */
-	queue_key(TK_AllKeysUp);
-	shift_action = TK_Neutral;
-	return;
-    }
+void trs_xlate_keysym(int keysym, int key_down) {
+	KeyTable* kt;
+	static int shift_action = TK_Neutral;
 
-   if( keysym == SDLK_HOME ) {
-	   kt =  &ascii_key_table[278];
-   }
-	else {
-    kt = &ascii_key_table[keysym & 0xFFFF];
+	if( !keysym && !key_down ) {
+		//force all keys up 
+		queue_key(TK_AllKeysUp);
+		shift_action = TK_Neutral;
+		return;
+	}
+	
+	for( kt=ascii_key_table; kt->key != SDLK_UNKNOWN; kt++ ) {
+		if( kt->key == keysym ) {
+			break;
+		}
 	}
 
-    if (kt->bit_action == TK_NULL) return;
-    if (trs_emulate_joystick(key_down, kt->bit_action)) return;
+	if (kt->bit_action == TK_NULL) return;
+	if (trs_emulate_joystick(key_down, kt->bit_action)) return;
 
-    if (key_down) {
-      if (shift_action != TK_ForceShiftPersistent &&
-	  shift_action != kt->shift_action) {
-	shift_action = kt->shift_action;
-	queue_key(shift_action);
-      }
-      queue_key(kt->bit_action);
-    } else {
-      queue_key(kt->bit_action | 0x10000);
-      if (shift_action != TK_Neutral &&
-	  shift_action == kt->shift_action) {
-	shift_action = TK_Neutral;
-	queue_key(shift_action);
-      }
-    }
+	if (key_down) {
+		if( shift_action != TK_ForceShiftPersistent && shift_action != kt->shift_action ) {
+			shift_action = kt->shift_action;
+			queue_key(shift_action);
+		}
+		queue_key(kt->bit_action);
+	} else {
+		queue_key(kt->bit_action | 0x10000);
+		if (shift_action != TK_Neutral && shift_action == kt->shift_action) {
+			shift_action = TK_Neutral;
+			queue_key(shift_action);
+		}
+	}
 }
 
 static void change_keystate(int action)
